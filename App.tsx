@@ -1,7 +1,9 @@
 
 
+
+
 import React from 'react';
-import { User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, FeedItem, Post, ActivityFeedItem, Message } from './types';
+import { User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, FeedItem, Post, ActivityFeedItem, Message, Group } from './types';
 import { 
     initDB, 
     getAllData,
@@ -12,6 +14,7 @@ import {
     updateUserStatus,
     updatePrivacySettings,
     updatePetPrivacySettings,
+    updatePetLocation as dbUpdatePetLocation,
     addPetPhoto as dbAddPetPhoto,
     addHealthLogEntry as dbAddHealthLogEntry,
     addPetAchievement as dbAddPetAchievement,
@@ -22,6 +25,9 @@ import {
     respondToPlaydateRequest,
     removePetFriend,
     sendMessage as dbSendMessage,
+    createGroup,
+    joinGroup,
+    leaveGroup,
 } from './database';
 import Header from './components/Header';
 import Login from './components/Login';
@@ -33,9 +39,11 @@ import DiscoverPage from './components/DiscoverPage';
 import MessagingView from './components/MessagingView';
 import Sidebar from './components/Sidebar';
 import FeedView from './components/FeedView';
+import GroupsPage from './components/GroupsPage';
+import GroupProfilePage from './components/GroupProfilePage';
 
 export type AuthState = 'loggedOut' | 'needsMfa' | 'loggedIn';
-export type CurrentView = 'feed' | 'discover' | 'profile' | 'pet' | 'admin' | 'messages';
+export type CurrentView = 'feed' | 'discover' | 'profile' | 'pet' | 'admin' | 'messages' | 'groups' | 'group';
 type LoginResult = 'success' | 'notFound' | 'suspended';
 
 // Enriched types for UI
@@ -50,6 +58,7 @@ const App: React.FC = () => {
     const [allActivities, setAllActivities] = React.useState<ActivityFeedItem[]>([]);
     const [allPlaydates, setAllPlaydates] = React.useState<Playdate[]>([]);
     const [allMessages, setAllMessages] = React.useState<Message[]>([]);
+    const [allGroups, setAllGroups] = React.useState<Group[]>([]);
   
     const [authState, setAuthState] = React.useState<AuthState>('loggedOut');
     const [currentUser, setCurrentUser] = React.useState<User | null>(null);
@@ -57,6 +66,7 @@ const App: React.FC = () => {
     const [currentView, setCurrentView] = React.useState<CurrentView>('feed');
     const [viewingUserId, setViewingUserId] = React.useState<string | null>(null);
     const [viewingPetId, setViewingPetId] = React.useState<string | null>(null);
+    const [viewingGroupId, setViewingGroupId] = React.useState<string | null>(null);
     const [activeConversationUserId, setActiveConversationUserId] = React.useState<string | null>(null);
 
     const fetchData = React.useCallback(async () => {
@@ -67,6 +77,7 @@ const App: React.FC = () => {
             setAllActivities(data.activities);
             setAllPlaydates(data.playdates);
             setAllMessages(data.messages);
+            setAllGroups(data.groups);
         } catch (error) {
             console.error("Failed to fetch data:", error);
         } finally {
@@ -130,6 +141,7 @@ const App: React.FC = () => {
         setCurrentView('feed');
         setViewingUserId(null);
         setViewingPetId(null);
+        setViewingGroupId(null);
         setAuthState('loggedOut');
     };
     
@@ -137,19 +149,21 @@ const App: React.FC = () => {
         setCurrentView(view);
         setViewingUserId(null);
         setViewingPetId(null);
-        // Do not reset activeConversationUserId if navigating to messages
+        setViewingGroupId(null);
+
         if (view !== 'messages') {
           setActiveConversationUserId(null);
         }
 
         if (view === 'profile' && id) setViewingUserId(id);
         if (view === 'pet' && id) setViewingPetId(id);
+        if (view === 'group' && id) setViewingGroupId(id);
         if (view === 'messages' && id) setActiveConversationUserId(id);
     };
 
-    const handleCreatePost = async (content: string, petId?: string) => {
+    const handleCreatePost = async (content: string, petId?: string, groupId?: string) => {
         if (!currentUser) return;
-        await createPost(currentUser.id, content, petId);
+        await createPost(currentUser.id, content, petId, groupId);
         await fetchData();
     };
   
@@ -195,6 +209,15 @@ const App: React.FC = () => {
     const handleRespondToPlaydateRequest = async (playdateId: string, accepted: boolean) => { await respondToPlaydateRequest(playdateId, accepted); await fetchData(); };
     const handleRemovePetFriend = async (petId: string, friendId: string) => { await removePetFriend(petId, friendId); await fetchData(); };
     const handleSendMessage = async (toUserId: string, content: string) => { if (!currentUser) return; await dbSendMessage(currentUser.id, toUserId, content); await fetchData(); };
+    const handleUpdatePetLocation = async (petId: string, location: string) => { await dbUpdatePetLocation(petId, location); await fetchData(); };
+
+    const handleCreateGroup = async (name: string, description: string, visibility: 'public' | 'private') => {
+        if (!currentUser) return;
+        await createGroup(currentUser.id, name, description, visibility);
+        await fetchData();
+    };
+    const handleJoinGroup = async (groupId: string) => { if (!currentUser) return; await joinGroup(currentUser.id, groupId); await fetchData(); };
+    const handleLeaveGroup = async (groupId: string) => { if (!currentUser) return; await leaveGroup(currentUser.id, groupId); await fetchData(); };
 
     // Render logic
     if (isLoading) {
@@ -211,6 +234,7 @@ const App: React.FC = () => {
 
     const viewingUser = viewingUserId ? allUsersMap[viewingUserId] : null;
     const viewingPet = viewingPetId ? allUsers.flatMap(u => u.pets).find(p => p.id === viewingPetId) : null;
+    const viewingGroup = viewingGroupId ? allGroups.find(g => g.id === viewingGroupId) : null;
 
     const renderContent = () => {
         switch(currentView) {
@@ -226,7 +250,7 @@ const App: React.FC = () => {
                             onCreateActivity={handleCreateActivity}
                         />;
             case 'discover':
-                return <DiscoverPage currentUser={currentUser} allUsers={allUsers} onNavigate={navigate} />;
+                return <DiscoverPage currentUser={currentUser} allUsers={allUsers} allGroups={allGroups} onNavigate={navigate} />;
             case 'profile':
                 return viewingUser ? <UserProfile 
                                         user={viewingUser}
@@ -251,6 +275,7 @@ const App: React.FC = () => {
                                         onAddPetAchievement={handleAddPetAchievement}
                                         onAddFavoriteItem={handleAddFavoriteItem}
                                         onRemovePetFriend={handleRemovePetFriend}
+                                        onUpdatePetLocation={handleUpdatePetLocation}
                                      /> : <div>Pet not found</div>;
             case 'admin':
                 return <AdminDashboard users={allUsers} currentUser={currentUser} onUpdateRole={handleUpdateUserRole} onUpdateStatus={handleUpdateUserStatus} />;
@@ -264,6 +289,25 @@ const App: React.FC = () => {
                             setActiveConversationUserId={setActiveConversationUserId}
                             onNavigate={navigate}
                         />;
+            case 'groups':
+                return <GroupsPage
+                            currentUser={currentUser}
+                            allGroups={allGroups}
+                            onNavigate={navigate}
+                            onCreateGroup={handleCreateGroup}
+                        />;
+            case 'group':
+                return viewingGroup ? <GroupProfilePage 
+                                        group={viewingGroup}
+                                        currentUser={currentUser}
+                                        allUsersMap={allUsersMap}
+                                        allPosts={allPosts}
+                                        onNavigate={navigate}
+                                        onJoinGroup={handleJoinGroup}
+                                        onLeaveGroup={handleLeaveGroup}
+                                        onCreatePost={handleCreatePost}
+                                        onLikeFeedItem={handleLikeFeedItem}
+                                     /> : <div>Group not found</div>;
             default:
                 return <div>Page not found</div>;
         }

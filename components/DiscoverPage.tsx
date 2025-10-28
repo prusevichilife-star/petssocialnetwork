@@ -1,19 +1,25 @@
 import React from 'react';
-import { User, Pet } from '../types';
+import { User, Pet, Group } from '../types';
 import { CurrentView } from '../App';
 
 interface DiscoverPageProps {
   currentUser: User;
   allUsers: User[];
+  allGroups: Group[];
   onNavigate: (view: CurrentView, id: string) => void;
 }
 
-const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, onNavigate }) => {
+const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, allGroups, onNavigate }) => {
 
   const suggestedUsers = allUsers
     .filter(u => u.id !== currentUser.id && !currentUser.friends.includes(u.id))
     .sort(() => 0.5 - Math.random()) // Randomize for variety
     .slice(0, 8);
+
+  const suggestedGroups = allGroups
+    .filter(g => g.visibility === 'public' && !g.members.some(m => m.userId === currentUser.id))
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 6);
 
   const allPets = allUsers.flatMap(u => u.pets);
   const featuredPets = [...allPets].sort(() => 0.5 - Math.random()).slice(0, 9);
@@ -22,8 +28,33 @@ const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, onNa
     <div className="space-y-12">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white">Discover</h1>
-        <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">Find new pets and friends in the PetSocial community!</p>
+        <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">Find new pets, friends, and groups in the PetSocial community!</p>
       </div>
+
+       <section>
+        <h2 className="text-2xl font-bold mb-4">Suggested Groups</h2>
+        {suggestedGroups.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {suggestedGroups.map(group => (
+              <div 
+                key={group.id} 
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all"
+                onClick={() => onNavigate('group', group.id)}
+              >
+                <img src={group.avatarUrl} alt={group.name} className="w-16 h-16 rounded-lg object-cover" />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-white">{group.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{group.members.length} member(s)</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+                <p className="text-gray-500 dark:text-gray-400">No new public groups to suggest right now!</p>
+            </div>
+        )}
+      </section>
 
       <section>
         <h2 className="text-2xl font-bold mb-4">Suggested Users</h2>

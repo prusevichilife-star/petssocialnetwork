@@ -20,7 +20,7 @@ const FilterButton: React.FC<{
     
     return (
         <button onClick={onClick} className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}>
-            <div className="h-5 w-5">{icon}</div>
+            {icon}
             <span className="ml-2 hidden sm:inline">{label}</span>
         </button>
     );
@@ -30,10 +30,10 @@ const FeedFilter: React.FC<FeedFilterProps> = ({ activeFilter, onFilterChange })
   return (
     <div className="mt-6 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-full">
       <div className="flex items-center justify-between space-x-1 sm:space-x-2">
-         <FilterButton label="All" icon={<GlobeAltIcon />} isActive={activeFilter === 'all'} onClick={() => onFilterChange('all')} />
-         <FilterButton label="Posts" icon={<ChatBubbleBottomCenterTextIcon />} isActive={activeFilter === 'posts'} onClick={() => onFilterChange('posts')} />
-         <FilterButton label="Activities" icon={<SparklesIcon />} isActive={activeFilter === 'activities'} onClick={() => onFilterChange('activities')} />
-         <FilterButton label="Friends" icon={<UserGroupIcon />} isActive={activeFilter === 'friends'} onClick={() => onFilterChange('friends')} />
+         <FilterButton label="All" icon={<GlobeAltIcon className="h-5 w-5" />} isActive={activeFilter === 'all'} onClick={() => onFilterChange('all')} />
+         <FilterButton label="Posts" icon={<ChatBubbleBottomCenterTextIcon className="h-5 w-5" />} isActive={activeFilter === 'posts'} onClick={() => onFilterChange('posts')} />
+         <FilterButton label="Activities" icon={<SparklesIcon className="h-5 w-5" />} isActive={activeFilter === 'activities'} onClick={() => onFilterChange('activities')} />
+         <FilterButton label="Friends" icon={<UserGroupIcon className="h-5 w-5" />} isActive={activeFilter === 'friends'} onClick={() => onFilterChange('friends')} />
       </div>
     </div>
   );

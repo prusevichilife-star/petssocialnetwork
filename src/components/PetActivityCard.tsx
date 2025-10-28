@@ -1,10 +1,8 @@
 import React from 'react';
-import { Pet, User } from '../types';
 import { EnrichedActivity, CurrentView } from '../App';
 import { timeAgo } from '../utils';
-import { HeartIcon, ChatBubbleOvalLeftIcon, ArrowUturnRightIcon } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
-import { FlagIcon, PuzzlePieceIcon, MapIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, ChatBubbleOvalLeftIcon, ArrowUturnRightIcon, SparklesIcon, ScissorsIcon } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartIconSolid, FlagIcon, PuzzlePieceIcon, MapIcon } from '@heroicons/react/24/solid';
 
 interface PetActivityCardProps {
   activity: EnrichedActivity;
@@ -13,10 +11,10 @@ interface PetActivityCardProps {
 }
 
 const activityIcons: Record<string, React.ReactNode> = {
-  'Milestone': <FlagIcon />,
-  'Playtime': <PuzzlePieceIcon />,
-  'Adventure': <MapIcon />,
-  'Grooming': <SparklesIcon />,
+  'Milestone': <FlagIcon className="h-5 w-5" />,
+  'Playtime': <PuzzlePieceIcon className="h-5 w-5" />,
+  'Adventure': <MapIcon className="h-5 w-5" />,
+  'Grooming': <ScissorsIcon className="h-5 w-5" />,
 };
 
 const PetActivityCard: React.FC<PetActivityCardProps> = ({ activity, onLike, onNavigate }) => {
@@ -51,7 +49,7 @@ const PetActivityCard: React.FC<PetActivityCardProps> = ({ activity, onLike, onN
         <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <div className="flex items-start">
              <div className="flex-shrink-0 mt-1 mr-3 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-                <div className="h-5 w-5">{activityIcons[category] || <SparklesIcon />}</div>
+                {activityIcons[category] || <SparklesIcon className="h-5 w-5" />}
             </div>
             <div>
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white">{title}</h3>

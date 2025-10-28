@@ -80,7 +80,6 @@ export interface User {
   name: string;
   username: string;
   avatarUrl: string;
-  // FIX: Add 'bio' property to the User interface to match database schema and component usage.
   bio: string;
   pets: Pet[];
   role: Role;

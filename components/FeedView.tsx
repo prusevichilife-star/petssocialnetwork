@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { User, Post, ActivityFeedItem } from '../types';
 import { CurrentView, EnrichedFeedItem } from '../App';
@@ -33,7 +31,9 @@ const FeedView: React.FC<FeedViewProps> = ({
     const allUsersMap = React.useMemo(() => Object.fromEntries(allUsers.map(u => [u.id, u])), [allUsers]);
 
     const visibleFeedItems: EnrichedFeedItem[] = React.useMemo(() => {
-        const feedItems = [...allPosts, ...allActivities];
+        const publicPosts = allPosts.filter(p => !p.groupId);
+        const feedItems = [...publicPosts, ...allActivities];
+        
         const visibleUserIds = new Set(allUsers
             .filter(owner => {
                 if (owner.id === currentUser.id) return true;
@@ -66,7 +66,7 @@ const FeedView: React.FC<FeedViewProps> = ({
                 switch(activeFilter) {
                     case 'posts': return item.type === 'post';
                     case 'activities': return item.type === 'activity';
-                    case 'friends': return currentUser.friends.includes(item.user.id);
+                    case 'friends': return currentUser.friends.includes(item.userId);
                     case 'all': default: return true;
                 }
             })

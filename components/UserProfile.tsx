@@ -103,6 +103,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
               <div className="mt-4 sm:mt-0">
                 <h1 className="text-3xl font-bold">{user.name}</h1>
                 <p className="text-md text-gray-500 dark:text-gray-400">@{user.username}</p>
+                <p className="mt-2 text-gray-600 dark:text-gray-300 max-w-lg">{user.bio}</p>
               </div>
             </div>
           ) : (

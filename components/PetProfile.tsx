@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Pet, User, Playdate, PetPrivacySettings, Visibility, HealthLogEntry, HealthLogEntryType, FavoriteItemCategory, FavoriteItem, PetAchievement } from '../types';
 import { CurrentView } from '../App';
@@ -6,19 +7,24 @@ import PetPrivacySettingsComponent from './PetPrivacySettings';
 import LockClosedIcon from './icons/LockClosedIcon';
 import ArrowUpOnSquareIcon from './icons/ArrowUpOnSquareIcon';
 import UserMinusIcon from './icons/UserMinusIcon';
+import MapIcon from './icons/MapIcon';
+import PencilSquareIcon from './icons/PencilSquareIcon';
+import CheckIcon from './icons/CheckIcon';
+import XMarkIcon from './icons/XMarkIcon';
+import PillIcon from './icons/PillIcon';
+import CalendarIcon from './icons/CalendarIcon';
+import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
 import TagIcon from './icons/TagIcon';
 import CakeIcon from './icons/CakeIcon';
 import BeakerIcon from './icons/BeakerIcon';
 import BuildingOfficeIcon from './icons/BuildingOfficeIcon';
-import PillIcon from './icons/PillIcon';
 import TrophyIcon from './icons/TrophyIcon';
 import SparklesIcon from './icons/SparklesIcon';
 import CubeTransparentIcon from './icons/CubeTransparentIcon';
 import ShoppingBagIcon from './icons/ShoppingBagIcon';
 import SunIcon from './icons/SunIcon';
-import ClipboardDocumentIcon from './icons/ClipboardDocumentIcon';
 import UserGroupIcon from './icons/UserGroupIcon';
-import CalendarDaysIcon from './icons/CalendarDaysIcon';
+
 
 interface PetProfileProps {
   pet: Pet;
@@ -32,6 +38,7 @@ interface PetProfileProps {
   onAddPetAchievement: (petId: string, newAchievement: Omit<PetAchievement, 'id'>) => void;
   onAddFavoriteItem: (petId: string, newItem: Omit<FavoriteItem, 'id'>) => void;
   onRemovePetFriend: (petId: string, friendId: string) => void;
+  onUpdatePetLocation: (petId: string, location: string) => void;
 }
 
 const calculateAge = (birthdate: string): string => {
@@ -61,7 +68,7 @@ const Section: React.FC<{title: string, icon: React.ReactNode, children: React.R
     </div>
 );
 
-const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsersMap, allPlaydates, onNavigate, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement, onAddFavoriteItem, onRemovePetFriend }) => {
+const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsersMap, allPlaydates, onNavigate, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement, onAddFavoriteItem, onRemovePetFriend, onUpdatePetLocation }) => {
   const age = calculateAge(pet.birthdate);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -78,6 +85,9 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsersMap, 
   const [newFavoriteName, setNewFavoriteName] = React.useState('');
   const [newFavoriteCategory, setNewFavoriteCategory] = React.useState<FavoriteItemCategory>('Toy');
 
+  const [isEditingLocation, setIsEditingLocation] = React.useState(false);
+  const [locationInput, setLocationInput] = React.useState(pet.location || '');
+
   const owner = (Object.values(allUsersMap) as User[]).find((user: User) => user.pets.some(p => p.id === pet.id));
   const isOwner = owner?.id === currentUser.id;
   const areFriends = owner?.friends.includes(currentUser.id) ?? false;
@@ -90,6 +100,11 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsersMap, 
         if (foundPet) return foundPet;
     }
     return undefined;
+  };
+
+  const handleLocationSave = () => {
+    onUpdatePetLocation(pet.id, locationInput);
+    setIsEditingLocation(false);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,11 +175,41 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsersMap, 
             <div>
                 <h2 className="text-xl font-bold mb-4">About {pet.name}</h2>
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                    <InfoPill icon={<ClipboardDocumentIcon className="h-8 w-8" />} label="Type" value={pet.type} />
+                    <InfoPill icon={<ClipboardDocumentListIcon className="h-8 w-8" />} label="Type" value={pet.type} />
                     <InfoPill icon={<TagIcon className="h-8 w-8" />} label="Breed" value={pet.breed} />
                     <InfoPill icon={<CakeIcon className="h-8 w-8" />} label="Age" value={age} />
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{pet.bio}</p>
+                 <div className="mt-4 flex items-center text-gray-500 dark:text-gray-400">
+                    <MapIcon className="h-5 w-5 mr-2 flex-shrink-0" />
+                    {isOwner && isEditingLocation ? (
+                        <div className="flex items-center gap-2 w-full">
+                            <input
+                                type="text"
+                                value={locationInput}
+                                onChange={(e) => setLocationInput(e.target.value)}
+                                placeholder="e.g., Central Park, NYC"
+                                className="w-full bg-gray-100 dark:bg-gray-700 border-2 border-transparent rounded-md py-1 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                onKeyDown={(e) => e.key === 'Enter' && handleLocationSave()}
+                            />
+                            <button onClick={handleLocationSave} className="p-1.5 rounded-full bg-green-500 text-white hover:bg-green-600" aria-label="Save location">
+                                <CheckIcon className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => { setIsEditingLocation(false); setLocationInput(pet.location || ''); }} className="p-1.5 rounded-full bg-gray-400 text-white hover:bg-gray-500" aria-label="Cancel editing location">
+                                <XMarkIcon className="h-4 w-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <span className="flex-grow italic">{pet.location || 'Location not set'}</span>
+                            {isOwner && (
+                                <button onClick={() => setIsEditingLocation(true)} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600" aria-label="Edit location">
+                                    <PencilSquareIcon className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
                  <Section title="Favorite Things" icon={<SparklesIcon className="h-6 w-6 text-yellow-500"/>} action={isOwner && <button onClick={() => setShowFavoriteForm(!showFavoriteForm)} className="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-800 font-semibold rounded-full hover:bg-indigo-200">{showFavoriteForm ? 'Cancel' : 'Add'}</button>}>
                    {isOwner && showFavoriteForm && (<form onSubmit={handleAddFavoriteItemSubmit} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg mb-4 space-y-4"> {/* ... form ... */} </form>)}
                     {(pet.favoriteItems && pet.favoriteItems.length > 0) ? (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -185,7 +230,7 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsersMap, 
         
         {isOwner && (<div className="p-6 border-t border-gray-200 dark:border-gray-700"><PetPrivacySettingsComponent settings={pet.privacySettings} onUpdate={(section, visibility) => onUpdatePetPrivacySettings(pet.id, section, visibility)}/></div>)}
 
-        {upcomingPlaydates.length > 0 && (<div className="p-6 border-t border-gray-200 dark:border-gray-700"><Section title="Upcoming Playdates" icon={<CalendarDaysIcon className="h-6 w-6"/>}>...</Section></div>)}
+        {upcomingPlaydates.length > 0 && (<div className="p-6 border-t border-gray-200 dark:border-gray-700"><Section title="Upcoming Playdates" icon={<CalendarIcon className="h-6 w-6"/>}>...</Section></div>)}
         
         <div className="p-6 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4"><h2 className="text-xl font-bold">Photo Gallery</h2>{isOwner && <><input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*"/><button onClick={() => fileInputRef.current?.click()} className="..."><ArrowUpOnSquareIcon className="h-5 w-5"/><span className="ml-2">Upload</span></button></>}</div>
