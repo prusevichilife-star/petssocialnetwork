@@ -1,474 +1,298 @@
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, FeedItem, Post, ActivityFeedItem, Message, UserDatabase } from './types';
-import { initDB, getAllUsersData, getUserData, setUserData } from './database';
+
+import React from 'react';
+import { User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, FeedItem, Post, ActivityFeedItem, Message } from './types';
+import { 
+    initDB, 
+    getAllData,
+    createPost,
+    createActivity,
+    likeFeedItem,
+    updateUserRole,
+    updateUserStatus,
+    updatePrivacySettings,
+    updatePetPrivacySettings,
+    addPetPhoto as dbAddPetPhoto,
+    addHealthLogEntry as dbAddHealthLogEntry,
+    addPetAchievement as dbAddPetAchievement,
+    addFavoriteItem as dbAddFavoriteItem,
+    sendFriendRequest,
+    respondToFriendRequest,
+    sendPlaydateRequest,
+    respondToPlaydateRequest,
+    removePetFriend,
+    sendMessage as dbSendMessage,
+} from './database';
 import Header from './components/Header';
-import CreateFeedItemForm from './components/CreateFeedItemForm';
-import PostCard from './components/PostCard';
-import PetActivityCard from './components/PetActivityCard';
 import Login from './components/Login';
 import Mfa from './components/Mfa';
 import AdminDashboard from './components/AdminDashboard';
 import UserProfile from './components/UserProfile';
 import PetProfile from './components/PetProfile';
-import RequestPlaydateModal from './components/RequestPlaydateModal';
 import DiscoverPage from './components/DiscoverPage';
 import MessagingView from './components/MessagingView';
-import FeedFilter from './components/FeedFilter';
+import Sidebar from './components/Sidebar';
+import FeedView from './components/FeedView';
 
-// Initialize DB on script load
-initDB();
-const initialAllUserData = getAllUsersData();
-
-
-type AuthState = 'loggedOut' | 'needsMfa' | 'loggedIn' | 'adminDashboard';
-type CurrentView = 'feed' | 'discover';
+export type AuthState = 'loggedOut' | 'needsMfa' | 'loggedIn';
+export type CurrentView = 'feed' | 'discover' | 'profile' | 'pet' | 'admin' | 'messages';
 type LoginResult = 'success' | 'notFound' | 'suspended';
-export type FilterType = 'all' | 'posts' | 'activities' | 'friends';
 
 // Enriched types for UI
 export interface EnrichedPost extends Post { user: User; pet?: Pet; isLiked: boolean; }
 export interface EnrichedActivity extends ActivityFeedItem { user: User; pet: Pet; isLiked: boolean; }
 export type EnrichedFeedItem = EnrichedPost | EnrichedActivity;
 
-
 const App: React.FC = () => {
-  const [allUserData, setAllUserData] = useState<Record<string, UserDatabase>>(initialAllUserData);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [allUsers, setAllUsers] = React.useState<User[]>([]);
+    const [allPosts, setAllPosts] = React.useState<Post[]>([]);
+    const [allActivities, setAllActivities] = React.useState<ActivityFeedItem[]>([]);
+    const [allPlaydates, setAllPlaydates] = React.useState<Playdate[]>([]);
+    const [allMessages, setAllMessages] = React.useState<Message[]>([]);
   
-  const [authState, setAuthState] = useState<AuthState>('loggedIn');
-  // FIX: Cast to UserDatabase to access 'user' property, avoiding 'unknown' type error.
-  const [currentUser, setCurrentUser] = useState<User | null>((allUserData['user-1'] as UserDatabase)?.user || null);
+    const [authState, setAuthState] = React.useState<AuthState>('loggedOut');
+    const [currentUser, setCurrentUser] = React.useState<User | null>(null);
   
-  const [viewingProfile, setViewingProfile] = useState<User | null>(null);
-  const [viewingPet, setViewingPet] = useState<Pet | null>(null);
-  const [currentView, setCurrentView] = useState<CurrentView>('feed');
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  
-  const [isPlaydateModalOpen, setIsPlaydateModalOpen] = useState(false);
-  const [playdateTarget, setPlaydateTarget] = useState<{user: User, pet: Pet} | null>(null);
+    const [currentView, setCurrentView] = React.useState<CurrentView>('feed');
+    const [viewingUserId, setViewingUserId] = React.useState<string | null>(null);
+    const [viewingPetId, setViewingPetId] = React.useState<string | null>(null);
+    const [activeConversationUserId, setActiveConversationUserId] = React.useState<string | null>(null);
 
-  const [isMessagingOpen, setIsMessagingOpen] = useState(false);
-  const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(null);
+    const fetchData = React.useCallback(async () => {
+        try {
+            const data = await getAllData();
+            setAllUsers(data.users);
+            setAllPosts(data.posts);
+            setAllActivities(data.activities);
+            setAllPlaydates(data.playdates);
+            setAllMessages(data.messages);
+        } catch (error) {
+            console.error("Failed to fetch data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
-  const allUsersMap = useMemo(() => Object.fromEntries(Object.values(allUserData).map(ud => [(ud as UserDatabase).user.id, (ud as UserDatabase).user])), [allUserData]);
-  const allUsersList = useMemo(() => Object.values(allUsersMap), [allUsersMap]);
+    React.useEffect(() => {
+        const initialize = async () => {
+            try {
+                await initDB();
+                await fetchData();
+                
+                const trustedUsername = localStorage.getItem('trustedUser');
+                if (trustedUsername) {
+                    const data = await getAllData(); // Re-fetch to ensure we have the latest data for auto-login
+                    const user = data.users.find(u => u.username === trustedUsername);
+                    if (user && user.status === 'active') {
+                        setCurrentUser(user);
+                        setAuthState('loggedIn');
+                    } else {
+                         localStorage.removeItem('trustedUser');
+                    }
+                }
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                setIsLoading(false); // Stop loading on failure
+            }
+        };
+        initialize();
+    }, [fetchData]);
 
-  useEffect(() => {
-    if (currentUser) {
-      // Keep currentUser in sync with the main state
-      setCurrentUser(allUsersMap[currentUser.id] || null);
-    }
-  }, [allUsersMap, currentUser]);
+    const allUsersMap = React.useMemo(() => Object.fromEntries(allUsers.map(u => [u.id, u])), [allUsers]);
 
-  const handleLogin = (username: string): LoginResult => {
-    const user = allUsersList.find(u => u.username === username);
-    if (user) {
-      if (user.status === 'suspended') return 'suspended';
-      setCurrentUser(user);
-      setAuthState('needsMfa');
-      return 'success';
-    }
-    return 'notFound';
-  };
+    React.useEffect(() => {
+        if (currentUser) {
+            setCurrentUser(allUsersMap[currentUser.id] || null);
+        }
+    }, [allUsersMap, currentUser]);
 
-  const handleMfaSubmit = (trustDevice: boolean) => {
-    if (currentUser && trustDevice) localStorage.setItem('trustedUser', currentUser.username);
-    setAuthState('loggedIn');
-  };
-  
-  const handleLogout = () => {
-    localStorage.removeItem('trustedUser');
-    setCurrentUser(null);
-    setViewingProfile(null);
-    setViewingPet(null);
-    setCurrentView('feed');
-    setAuthState('loggedOut');
-  };
-
-  const handleCreatePost = useCallback((content: string, petId?: string) => {
-    if (!content.trim() || !currentUser) return;
-    const userDb = getUserData(currentUser.id);
-    if (!userDb) return;
-    
-    const newPost: Post = {
-      id: `post-${Date.now()}`, type: 'post', userId: currentUser.id, content,
-      date: new Date().toISOString(), likeCount: 0,
-      petId: petId || (currentUser.pets.length === 1 ? currentUser.pets[0].id : undefined),
+    // Handlers
+    const handleLogin = (username: string): LoginResult => {
+        const user = allUsers.find(u => u.username === username);
+        if (user) {
+            if (user.status === 'suspended') return 'suspended';
+            setCurrentUser(user);
+            setAuthState('needsMfa');
+            return 'success';
+        }
+        return 'notFound';
     };
 
-    userDb.posts.unshift(newPost);
-    setUserData(currentUser.id, userDb);
-    setAllUserData(prev => ({...prev, [currentUser.id]: userDb }));
-  }, [currentUser]);
+    const handleMfaSubmit = (trustDevice: boolean) => {
+        if (currentUser && trustDevice) localStorage.setItem('trustedUser', currentUser.username);
+        setAuthState('loggedIn');
+    };
   
-  const handleCreateActivity = useCallback((activityData: Omit<ActivityFeedItem, 'id'|'type'|'userId'|'petId'|'likeCount'>, petId: string) => {
-    if (!currentUser) return;
-    const userDb = getUserData(currentUser.id);
-    const pet = currentUser.pets.find(p => p.id === petId);
-    if (!pet || !userDb) return;
-
-    const newActivity: ActivityFeedItem = {
-        ...activityData, id: `act-${Date.now()}`, type: 'activity',
-        userId: currentUser.id, petId: pet.id, likeCount: 0,
+    const handleLogout = () => {
+        localStorage.removeItem('trustedUser');
+        setCurrentUser(null);
+        setCurrentView('feed');
+        setViewingUserId(null);
+        setViewingPetId(null);
+        setAuthState('loggedOut');
     };
     
-    userDb.activities.push(newActivity);
-    userDb.activities.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setUserData(currentUser.id, userDb);
-    setAllUserData(prev => ({...prev, [currentUser.id]: userDb }));
-  }, [currentUser]);
-
-  const handleLikeFeedItem = useCallback((itemId: string, ownerId: string) => {
-    if (!currentUser) return;
-
-    const ownerDb = getUserData(ownerId);
-    const currentUserDb = ownerId === currentUser.id ? ownerDb : getUserData(currentUser.id);
-    if (!ownerDb || !currentUserDb) return;
-
-    const isLiked = currentUserDb.user.likedFeedItems.includes(itemId);
-    let item: Post | ActivityFeedItem | undefined = ownerDb.posts.find(p => p.id === itemId) || ownerDb.activities.find(a => a.id === itemId);
-
-    if (item) {
-        if (isLiked) {
-            item.likeCount--;
-            currentUserDb.user.likedFeedItems = currentUserDb.user.likedFeedItems.filter(id => id !== itemId);
-        } else {
-            item.likeCount++;
-            currentUserDb.user.likedFeedItems.push(itemId);
+    const navigate = (view: CurrentView, id?: string) => {
+        setCurrentView(view);
+        setViewingUserId(null);
+        setViewingPetId(null);
+        // Do not reset activeConversationUserId if navigating to messages
+        if (view !== 'messages') {
+          setActiveConversationUserId(null);
         }
 
-        setUserData(ownerId, ownerDb);
-        if(ownerId !== currentUser.id) setUserData(currentUser.id, currentUserDb);
-        
-        setAllUserData(prev => ({
-            ...prev,
-            [ownerId]: ownerDb,
-            [currentUser.id]: currentUserDb
-        }));
-    }
-  }, [currentUser]);
-  
-  const handleViewProfile = (user: User) => {
-    setViewingPet(null);
-    setCurrentView('feed');
-    setViewingProfile(user);
-  };
-  
-  const handleReturnToFeed = () => {
-    setViewingPet(null);
-    setViewingProfile(null);
-    setCurrentView('feed');
-  };
-
-  const handleViewPet = (pet: Pet) => {
-    setViewingProfile(null);
-    setCurrentView('feed');
-    setViewingPet(pet);
-  };
-
-  const handleNavigateToDashboard = () => setAuthState('adminDashboard');
-  const handleReturnToFeedFromDashboard = () => setAuthState('loggedIn');
-  const handleNavigateToDiscover = () => {
-    setViewingProfile(null);
-    setViewingPet(null);
-    setCurrentView('discover');
-  };
-
-  const handleUpdateUserRole = (userId: string, role: Role) => {
-    const userDb = getUserData(userId);
-    if (!userDb) return;
-    userDb.user.role = role;
-    setUserData(userId, userDb);
-    setAllUserData(prev => ({...prev, [userId]: userDb}));
-  };
-
-  const handleUpdateUserStatus = (userId: string, status: UserStatus) => {
-    const userDb = getUserData(userId);
-    if (!userDb) return;
-    userDb.user.status = status;
-    setUserData(userId, userDb);
-    setAllUserData(prev => ({...prev, [userId]: userDb}));
-  };
-  
-  const handleUpdatePrivacySettings = (userId: string, section: keyof PrivacySettings, visibility: Visibility) => {
-    const userDb = getUserData(userId);
-    if (!userDb) return;
-    userDb.user.privacySettings[section] = visibility;
-    setUserData(userId, userDb);
-    setAllUserData(prev => ({...prev, [userId]: userDb}));
-    if (viewingProfile?.id === userId) setViewingProfile(userDb.user);
-  };
-
-  const handleUpdatePetPrivacySettings = (petId: string, section: keyof PetPrivacySettings, visibility: Visibility | 'private' | 'friends') => {
-      const owner = allUsersList.find(u => u.pets.some(p => p.id === petId));
-      if (!owner) return;
-      const ownerDb = getUserData(owner.id);
-      if (!ownerDb) return;
-      
-      const pet = ownerDb.user.pets.find(p => p.id === petId);
-      // FIX: The type for pet privacy settings is more restrictive for 'playdates'
-      // than for 'profile'. This conditional assignment ensures type safety.
-      if (pet) {
-        if (section === 'profile') {
-          pet.privacySettings[section] = visibility;
-        } else if (section === 'playdates' && visibility !== 'public') {
-          pet.privacySettings[section] = visibility;
-        }
-      }
-
-      setUserData(owner.id, ownerDb);
-      setAllUserData(prev => ({...prev, [owner.id]: ownerDb}));
-      if (viewingPet?.id === petId && pet) setViewingPet(pet);
-  };
-
-  const handleAddPetData = (petId: string, updateFn: (pet: Pet) => void) => {
-    const owner = allUsersList.find(u => u.pets.some(p => p.id === petId));
-    if (!owner) return;
-    const ownerDb = getUserData(owner.id);
-    if (!ownerDb) return;
-    
-    const pet = ownerDb.user.pets.find(p => p.id === petId);
-    if (pet) {
-      updateFn(pet);
-      setUserData(owner.id, ownerDb);
-      setAllUserData(prev => ({...prev, [owner.id]: ownerDb}));
-      if (viewingPet?.id === petId) setViewingPet(pet);
-    }
-  };
-
-  const handleAddPetPhoto = (petId: string, photoUrl: string) => handleAddPetData(petId, pet => pet.photos.push(photoUrl));
-  const handleAddHealthLogEntry = (petId: string, newEntry: Omit<HealthLogEntry, 'id'>) => handleAddPetData(petId, pet => {
-    if (!pet.healthLog) pet.healthLog = [];
-    pet.healthLog.push({ ...newEntry, id: `hl-${Date.now()}` });
-  });
-  const handleAddPetAchievement = (petId: string, newAchievement: Omit<PetAchievement, 'id'>) => handleAddPetData(petId, pet => {
-    if (!pet.achievements) pet.achievements = [];
-    pet.achievements.push({ ...newAchievement, id: `ach-${Date.now()}` });
-  });
-  const handleAddFavoriteItem = (petId: string, newItem: Omit<FavoriteItem, 'id'>) => handleAddPetData(petId, pet => {
-    if (!pet.favoriteItems) pet.favoriteItems = [];
-    pet.favoriteItems.push({ ...newItem, id: `fav-${Date.now()}` });
-  });
-
-  const handleSendFriendRequest = (toUserId: string) => {
-    if (!currentUser || currentUser.id === toUserId) return;
-    const fromUserId = currentUser.id;
-    
-    const fromDb = getUserData(fromUserId);
-    const toDb = getUserData(toUserId);
-    if (!fromDb || !toDb) return;
-
-    const newReq: FriendRequest = { id: `req-${Date.now()}`, fromUserId, toUserId, status: 'pending' };
-    fromDb.user.outgoingFriendRequests.push(newReq);
-    toDb.user.incomingFriendRequests.push(newReq);
-
-    setUserData(fromUserId, fromDb);
-    setUserData(toUserId, toDb);
-    setAllUserData(prev => ({ ...prev, [fromUserId]: fromDb, [toUserId]: toDb }));
-  };
-
-  const handleRespondToFriendRequest = (requestId: string, accepted: boolean) => {
-    const request = allUsersList.flatMap(u => [...u.incomingFriendRequests, ...u.outgoingFriendRequests]).find(r => r.id === requestId);
-    if (!request || !currentUser) return;
-    
-    const { fromUserId, toUserId } = request;
-    const fromDb = getUserData(fromUserId);
-    const toDb = getUserData(toUserId);
-    if (!fromDb || !toDb) return;
-
-    fromDb.user.outgoingFriendRequests = fromDb.user.outgoingFriendRequests.filter(r => r.id !== requestId);
-    toDb.user.incomingFriendRequests = toDb.user.incomingFriendRequests.filter(r => r.id !== requestId);
-    
-    if (accepted) {
-        fromDb.user.friends = [...new Set([...fromDb.user.friends, toUserId])];
-        toDb.user.friends = [...new Set([...toDb.user.friends, fromUserId])];
-    }
-
-    setUserData(fromUserId, fromDb);
-    setUserData(toUserId, toDb);
-    setAllUserData(prev => ({ ...prev, [fromUserId]: fromDb, [toUserId]: toDb }));
-  };
-
-  const handleOpenPlaydateModal = (user: User, pet: Pet) => {
-    setPlaydateTarget({ user, pet });
-    setIsPlaydateModalOpen(true);
-  };
-
-  const handleSendPlaydateRequest = (fromPetId: string, date: string, location: string) => {
-    if (!currentUser || !playdateTarget) return;
-    const fromDb = getUserData(currentUser.id);
-    const toDb = getUserData(playdateTarget.user.id);
-    if (!fromDb || !toDb) return;
-
-    const newPlaydate: Playdate = {
-      id: `pd-${Date.now()}`, fromPetId, toPetId: playdateTarget.pet.id,
-      fromUserId: currentUser.id, toUserId: playdateTarget.user.id,
-      status: 'pending', date, location,
+        if (view === 'profile' && id) setViewingUserId(id);
+        if (view === 'pet' && id) setViewingPetId(id);
+        if (view === 'messages' && id) setActiveConversationUserId(id);
     };
 
-    fromDb.playdates.push(newPlaydate);
-    toDb.playdates.push(newPlaydate);
-    setUserData(currentUser.id, fromDb);
-    setUserData(playdateTarget.user.id, toDb);
-    setAllUserData(prev => ({...prev, [currentUser.id]: fromDb, [playdateTarget.user.id]: toDb }));
-    
-    setIsPlaydateModalOpen(false);
-    setPlaydateTarget(null);
-  };
-  
-  const handleRespondToPlaydateRequest = (playdateId: string, accepted: boolean) => {
-      const allPlaydates = Object.values(allUserData).flatMap(ud => (ud as UserDatabase).playdates);
-      const playdate = allPlaydates.find(p => p.id === playdateId);
-      if (!playdate) return;
-      
-      const fromDb = getUserData(playdate.fromUserId);
-      const toDb = getUserData(playdate.toUserId);
-      if (!fromDb || !toDb) return;
-      
-      const updateStatus = (pd: Playdate) => pd.status = accepted ? 'accepted' : 'declined';
-      fromDb.playdates.find(p => p.id === playdateId)!.status = accepted ? 'accepted' : 'declined';
-      toDb.playdates.find(p => p.id === playdateId)!.status = accepted ? 'accepted' : 'declined';
-
-      if (accepted) {
-          const fromPet = fromDb.user.pets.find(p => p.id === playdate.fromPetId);
-          const toPet = toDb.user.pets.find(p => p.id === playdate.toPetId);
-          if (fromPet && toPet) {
-              fromPet.friends = [...new Set([...fromPet.friends, toPet.id])];
-              toPet.friends = [...new Set([...toPet.friends, fromPet.id])];
-          }
-      }
-      
-      setUserData(fromDb.user.id, fromDb);
-      setUserData(toDb.user.id, toDb);
-      setAllUserData(prev => ({...prev, [fromDb.user.id]: fromDb, [toDb.user.id]: toDb}));
-  };
-
-  const handleRemovePetFriend = (petId: string, friendId: string) => {
-      const petOwner = allUsersList.find(u => u.pets.some(p => p.id === petId));
-      const friendOwner = allUsersList.find(u => u.pets.some(p => p.id === friendId));
-      if (!petOwner || !friendOwner) return;
-
-      const petOwnerDb = getUserData(petOwner.id);
-      const friendOwnerDb = getUserData(friendOwner.id);
-      if (!petOwnerDb || !friendOwnerDb) return;
-
-      const pet = petOwnerDb.user.pets.find(p => p.id === petId);
-      const friendPet = friendOwnerDb.user.pets.find(p => p.id === friendId);
-
-      if (pet) pet.friends = pet.friends.filter(id => id !== friendId);
-      if (friendPet) friendPet.friends = friendPet.friends.filter(id => id !== petId);
-
-      setUserData(petOwner.id, petOwnerDb);
-      setUserData(friendOwner.id, friendOwnerDb);
-      setAllUserData(prev => ({...prev, [petOwner.id]: petOwnerDb, [friendOwner.id]: friendOwnerDb}));
-      if (viewingPet?.id === petId && pet) setViewingPet(pet);
-  };
-  
-  const handleOpenMessaging = (startWithUserId?: string) => {
-    setIsMessagingOpen(true);
-    if (startWithUserId) setActiveConversationUserId(startWithUserId);
-  };
-
-  const handleSendMessage = (toUserId: string, content: string) => {
-    if (!currentUser) return;
-    const fromDb = getUserData(currentUser.id);
-    const toDb = getUserData(toUserId);
-    if (!fromDb || !toDb) return;
-    
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`, fromUserId: currentUser.id, toUserId, content,
-      timestamp: new Date().toISOString(), read: false,
+    const handleCreatePost = async (content: string, petId?: string) => {
+        if (!currentUser) return;
+        await createPost(currentUser.id, content, petId);
+        await fetchData();
     };
-    fromDb.messages.push({ ...newMessage, read: true });
-    toDb.messages.push(newMessage);
-
-    setUserData(currentUser.id, fromDb);
-    setUserData(toUserId, toDb);
-    setAllUserData(prev => ({...prev, [currentUser.id]: fromDb, [toUserId]: toDb }));
-  };
-
-  const handleStartConversation = (userId: string) => {
-    setActiveConversationUserId(userId);
-    setIsMessagingOpen(true);
-  };
-
-
-  if (authState === 'loggedOut' || !currentUser) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  if (authState === 'needsMfa') {
-    return <Mfa onSubmit={handleMfaSubmit} />;
-  }
   
-  if (authState === 'adminDashboard') {
-    return <AdminDashboard users={allUsersList} currentUser={currentUser} onReturnToFeed={handleReturnToFeedFromDashboard} onUpdateRole={handleUpdateUserRole} onUpdateStatus={handleUpdateUserStatus} />;
-  }
+    const handleCreateActivity = async (activityData: Omit<ActivityFeedItem, 'id'|'type'|'userId'|'petId'|'likeCount'>, petId: string) => {
+        if (!currentUser) return;
+        await createActivity(currentUser.id, petId, activityData);
+        await fetchData();
+    };
 
-  const visibleFeedItems: EnrichedFeedItem[] = useMemo(() => {
-    const visibleUserIds = allUsersList
-        .filter(owner => {
-            if (owner.id === currentUser.id) return true;
-            const visibility = owner.privacySettings.activity;
-            if (visibility === 'public') return true;
-            if (visibility === 'friends' && owner.friends.includes(currentUser.id)) return true;
-            return false;
-        })
-        .map(u => u.id);
-    
-    const feed: EnrichedFeedItem[] = [];
-    visibleUserIds.forEach(userId => {
-        const userDb = allUserData[userId];
-        if (userDb) {
-            const owner = (userDb as UserDatabase).user;
-            (userDb as UserDatabase).posts.forEach(p => feed.push({ ...p, user: owner, pet: owner.pets.find(pet => pet.id === p.petId), isLiked: currentUser.likedFeedItems.includes(p.id) }));
-            (userDb as UserDatabase).activities.forEach(a => feed.push({ ...a, user: owner, pet: owner.pets.find(pet => pet.id === a.petId)!, isLiked: currentUser.likedFeedItems.includes(a.id) }));
-        }
-    });
-    
-    return feed
-      .filter(item => {
-        switch(activeFilter) {
-            case 'posts': return item.type === 'post';
-            case 'activities': return item.type === 'activity';
-            case 'friends': return currentUser.friends.includes(item.userId);
-            case 'all': default: return true;
-        }
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [allUserData, currentUser, activeFilter]);
+    const handleLikeFeedItem = async (itemId: string) => {
+        if (!currentUser) return;
+        await likeFeedItem(currentUser.id, itemId);
+        await fetchData();
+    };
 
-  const MainContent: React.FC = () => {
-    if (viewingPet) {
-      const owner = allUsersList.find(u => u.pets.some(p => p.id === viewingPet.id));
-      return (
-        <PetProfile 
-          pet={viewingPet} currentUser={currentUser} allUsers={allUsersMap}
-          allPlaydates={Object.values(allUserData).flatMap(ud => (ud as UserDatabase).playdates)}
-          onReturn={() => setViewingPet(null)} onViewPet={handleViewPet}
-          onViewProfile={owner ? () => handleViewProfile(owner) : undefined}
-          onUpdatePetPrivacySettings={handleUpdatePetPrivacySettings}
-          onAddPetPhoto={handleAddPetPhoto}
-          onAddHealthLogEntry={handleAddHealthLogEntry}
-          onAddPetAchievement={handleAddPetAchievement}
-          onAddFavoriteItem={handleAddFavoriteItem}
-          onRemovePetFriend={handleRemovePetFriend}
-        />
-      );
+    const handleUpdateUserRole = async (userId: string, role: Role) => {
+        await updateUserRole(userId, role);
+        await fetchData();
+    };
+
+    const handleUpdateUserStatus = async (userId: string, status: UserStatus) => {
+        await updateUserStatus(userId, status);
+        await fetchData();
+    };
+  
+    const handleUpdatePrivacySettings = async (userId: string, section: keyof PrivacySettings, visibility: Visibility) => {
+        await updatePrivacySettings(userId, section, visibility);
+        await fetchData();
+    };
+
+    const handleUpdatePetPrivacySettings = async (petId: string, section: keyof PetPrivacySettings, visibility: Visibility | 'private' | 'friends') => {
+        await updatePetPrivacySettings(petId, section, visibility);
+        await fetchData();
+    };
+    
+    const handleAddPetPhoto = async (petId: string, photoUrl: string) => { await dbAddPetPhoto(petId, photoUrl); await fetchData(); };
+    const handleAddHealthLogEntry = async (petId: string, newEntry: Omit<HealthLogEntry, 'id'>) => { await dbAddHealthLogEntry(petId, newEntry); await fetchData(); };
+    const handleAddPetAchievement = async (petId: string, newAchievement: Omit<PetAchievement, 'id'>) => { await dbAddPetAchievement(petId, newAchievement); await fetchData(); };
+    const handleAddFavoriteItem = async (petId: string, newItem: Omit<FavoriteItem, 'id'>) => { await dbAddFavoriteItem(petId, newItem); await fetchData(); };
+    const handleSendFriendRequest = async (toUserId: string) => { if (!currentUser) return; await sendFriendRequest(currentUser.id, toUserId); await fetchData(); };
+    const handleRespondToFriendRequest = async (requestId: string, accepted: boolean) => { await respondToFriendRequest(requestId, accepted); await fetchData(); };
+    const handleSendPlaydateRequest = async (fromPetId: string, toUserId: string, toPetId: string, date: string, location: string) => { if (!currentUser) return; await sendPlaydateRequest(currentUser.id, fromPetId, toUserId, toPetId, date, location); await fetchData(); };
+    const handleRespondToPlaydateRequest = async (playdateId: string, accepted: boolean) => { await respondToPlaydateRequest(playdateId, accepted); await fetchData(); };
+    const handleRemovePetFriend = async (petId: string, friendId: string) => { await removePetFriend(petId, friendId); await fetchData(); };
+    const handleSendMessage = async (toUserId: string, content: string) => { if (!currentUser) return; await dbSendMessage(currentUser.id, toUserId, content); await fetchData(); };
+
+    // Render logic
+    if (isLoading) {
+        return <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-lg font-semibold">Loading PetSocial...</div>;
     }
-    if (viewingProfile) {
-      return (
-        <UserProfile 
-          user={viewingProfile} currentUser={currentUser} allUsers={allUsersList}
-          onReturnToFeed={handleReturnToFeed} onUpdatePrivacySettings={handleUpdatePrivacySettings}
-          onViewPet={handleViewPet} onSendFriendRequest={handleSendFriendRequest}
-          onRespondToFriendRequest={handleRespondToFriendRequest} onOpenPlaydateModal={handleOpenPlaydateModal}
-          onStartConversation={handleStartConversation} onViewProfile={handleViewProfile}
-        />
-      );
+
+    if (authState === 'loggedOut' || !currentUser) {
+        return <Login onLogin={handleLogin} />;
     }
-    if (currentView === 'discover') {
-        return <DiscoverPage currentUser={currentUser} allUsers={allUsersList} onViewProfile={handleViewProfile} onViewPet={handleViewPet} />;
+
+    if (authState === 'needsMfa') {
+        return <Mfa onSubmit={handleMfaSubmit} />;
     }
+
+    const viewingUser = viewingUserId ? allUsersMap[viewingUserId] : null;
+    const viewingPet = viewingPetId ? allUsers.flatMap(u => u.pets).find(p => p.id === viewingPetId) : null;
+
+    const renderContent = () => {
+        switch(currentView) {
+            case 'feed':
+                return <FeedView 
+                            currentUser={currentUser} 
+                            allUsers={allUsers}
+                            allPosts={allPosts}
+                            allActivities={allActivities}
+                            onNavigate={navigate}
+                            onLikeFeedItem={handleLikeFeedItem}
+                            onCreatePost={handleCreatePost}
+                            onCreateActivity={handleCreateActivity}
+                        />;
+            case 'discover':
+                return <DiscoverPage currentUser={currentUser} allUsers={allUsers} onNavigate={navigate} />;
+            case 'profile':
+                return viewingUser ? <UserProfile 
+                                        user={viewingUser}
+                                        currentUser={currentUser}
+                                        allUsers={allUsers}
+                                        onNavigate={navigate}
+                                        onUpdatePrivacySettings={handleUpdatePrivacySettings}
+                                        onSendFriendRequest={handleSendFriendRequest}
+                                        onRespondToFriendRequest={handleRespondToFriendRequest}
+                                        onSendPlaydateRequest={handleSendPlaydateRequest}
+                                     /> : <div>User not found</div>;
+            case 'pet':
+                return viewingPet ? <PetProfile 
+                                        pet={viewingPet}
+                                        currentUser={currentUser}
+                                        allUsersMap={allUsersMap}
+                                        allPlaydates={allPlaydates}
+                                        onNavigate={navigate}
+                                        onUpdatePetPrivacySettings={handleUpdatePetPrivacySettings}
+                                        onAddPetPhoto={handleAddPetPhoto}
+                                        onAddHealthLogEntry={handleAddHealthLogEntry}
+                                        onAddPetAchievement={handleAddPetAchievement}
+                                        onAddFavoriteItem={handleAddFavoriteItem}
+                                        onRemovePetFriend={handleRemovePetFriend}
+                                     /> : <div>Pet not found</div>;
+            case 'admin':
+                return <AdminDashboard users={allUsers} currentUser={currentUser} onUpdateRole={handleUpdateUserRole} onUpdateStatus={handleUpdateUserStatus} />;
+            case 'messages':
+                 return <MessagingView 
+                            currentUser={currentUser}
+                            allUsers={allUsersMap}
+                            messages={allMessages}
+                            onSendMessage={handleSendMessage}
+                            activeConversationUserId={activeConversationUserId}
+                            setActiveConversationUserId={setActiveConversationUserId}
+                            onNavigate={navigate}
+                        />;
+            default:
+                return <div>Page not found</div>;
+        }
+    };
+
     return (
-      <main className="max-w-2xl mx-auto py-8 px-4">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-sans">
+            <Header
+                user={currentUser}
+                allUsers={allUsersMap}
+                allFriendRequests={currentUser.incomingFriendRequests}
+                allPlaydates={allPlaydates.filter(p => p.toUserId === currentUser.id && p.status === 'pending')}
+                messages={allMessages}
+                onLogout={handleLogout}
+                onRespondToFriendRequest={handleRespondToFriendRequest}
+                onRespondToPlaydateRequest={handleRespondToPlaydateRequest}
+                onNavigate={navigate}
+            />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-12 gap-8">
+                <Sidebar currentUser={currentUser} currentView={currentView} onNavigate={navigate} />
+                <main className="col-span-12 lg:col-span-9 xl:col-span-7 py-8">
+                    {renderContent()}
+                </main>
+                <aside className="hidden xl:block col-span-2 py-8">
+                    {/* Placeholder for widgets, trending, etc. */}
+                </aside>
+            </div>
+        </div>
+    );
+};
+
+export default App;

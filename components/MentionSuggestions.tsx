@@ -15,7 +15,6 @@ const MentionSuggestions: React.FC<MentionSuggestionsProps> = ({ users, onSelect
                     <li
                         key={user.id}
                         onClick={() => onSelect(user)}
-                        onMouseEnter={() => {}} // Could be used to update activeIndex on hover
                         className={`p-3 cursor-pointer flex items-center space-x-3 ${
                             index === activeIndex ? 'bg-indigo-100 dark:bg-gray-600' : 'hover:bg-gray-50 dark:hover:bg-gray-600/50'
                         }`}

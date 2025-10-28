@@ -129,11 +129,3 @@ export interface Message {
     timestamp: string; // ISO String
     read: boolean;
 }
-
-export interface UserDatabase {
-  user: User;
-  posts: Post[];
-  activities: ActivityFeedItem[];
-  messages: Message[];
-  playdates: Playdate[];
-}

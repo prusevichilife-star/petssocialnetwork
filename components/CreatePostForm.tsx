@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+
+import React from 'react';
 import { User } from '../types';
 
 interface CreatePostFormProps {
@@ -8,7 +9,7 @@ interface CreatePostFormProps {
 }
 
 const CreatePostForm: React.FC<CreatePostFormProps> = ({ onCreatePost, user }) => {
-  const [content, setContent] = useState('');
+  const [content, setContent] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

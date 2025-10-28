@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, FriendRequest, Playdate, Pet } from '../types';
 import CheckIcon from './icons/CheckIcon';
-import XIcon from './icons/XIcon';
+import XMarkIcon from './icons/XMarkIcon';
 import GiftIcon from './icons/GiftIcon';
 
 interface NotificationsDropdownProps {
@@ -33,7 +33,7 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ user, all
     const upcomingBirthdays = getUpcomingBirthdays(user.pets);
 
     const findPetById = (petId: string): Pet | undefined => {
-        for (const u of Object.values(allUsers)) {
+        for (const u of (Object.values(allUsers) as User[])) {
             const foundPet = u.pets.find(p => p.id === petId);
             if (foundPet) return foundPet;
         }
@@ -64,8 +64,8 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ user, all
                                 </div>
                             </div>
                             <div className="mt-2 flex justify-end space-x-2">
-                                <button onClick={() => onRespondToFriendRequest(req.id, true)} className="px-3 py-1 text-xs bg-green-500 hover:bg-green-600 text-white font-semibold rounded-full flex items-center"><CheckIcon /> <span className="ml-1">Accept</span></button>
-                                <button onClick={() => onRespondToFriendRequest(req.id, false)} className="px-3 py-1 text-xs bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-semibold rounded-full flex items-center"><XIcon /> <span className="ml-1">Decline</span></button>
+                                <button onClick={() => onRespondToFriendRequest(req.id, true)} className="px-3 py-1 text-xs bg-green-500 hover:bg-green-600 text-white font-semibold rounded-full flex items-center"><CheckIcon className="h-4 w-4" /> <span className="ml-1">Accept</span></button>
+                                <button onClick={() => onRespondToFriendRequest(req.id, false)} className="px-3 py-1 text-xs bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-semibold rounded-full flex items-center"><XMarkIcon className="h-4 w-4" /> <span className="ml-1">Decline</span></button>
                             </div>
                         </li>
                     )
@@ -86,8 +86,8 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ user, all
                                 </div>
                             </div>
                             <div className="mt-2 flex justify-end space-x-2">
-                                <button onClick={() => onRespondToPlaydateRequest(pd.id, true)} className="px-3 py-1 text-xs bg-green-500 hover:bg-green-600 text-white font-semibold rounded-full flex items-center"><CheckIcon /> <span className="ml-1">Accept</span></button>
-                                <button onClick={() => onRespondToPlaydateRequest(pd.id, false)} className="px-3 py-1 text-xs bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-semibold rounded-full flex items-center"><XIcon /> <span className="ml-1">Decline</span></button>
+                                <button onClick={() => onRespondToPlaydateRequest(pd.id, true)} className="px-3 py-1 text-xs bg-green-500 hover:bg-green-600 text-white font-semibold rounded-full flex items-center"><CheckIcon className="h-4 w-4" /> <span className="ml-1">Accept</span></button>
+                                <button onClick={() => onRespondToPlaydateRequest(pd.id, false)} className="px-3 py-1 text-xs bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-semibold rounded-full flex items-center"><XMarkIcon className="h-4 w-4" /> <span className="ml-1">Decline</span></button>
                             </div>
                         </li>
                     )

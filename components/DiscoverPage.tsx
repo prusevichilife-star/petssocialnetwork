@@ -1,27 +1,26 @@
-
 import React from 'react';
 import { User, Pet } from '../types';
+import { CurrentView } from '../App';
 
 interface DiscoverPageProps {
   currentUser: User;
   allUsers: User[];
-  onViewProfile: (user: User) => void;
-  onViewPet: (pet: Pet) => void;
+  onNavigate: (view: CurrentView, id: string) => void;
 }
 
-const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, onViewProfile, onViewPet }) => {
+const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, onNavigate }) => {
 
   const suggestedUsers = allUsers
     .filter(u => u.id !== currentUser.id && !currentUser.friends.includes(u.id))
     .sort(() => 0.5 - Math.random()) // Randomize for variety
     .slice(0, 8);
 
-  const allPets = Object.values(allUsers).flatMap(u => u.pets);
+  const allPets = allUsers.flatMap(u => u.pets);
   const featuredPets = [...allPets].sort(() => 0.5 - Math.random()).slice(0, 9);
   
   return (
-    <main className="max-w-4xl mx-auto py-8 px-4">
-      <div className="text-center mb-12">
+    <div className="space-y-12">
+      <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white">Discover</h1>
         <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">Find new pets and friends in the PetSocial community!</p>
       </div>
@@ -33,7 +32,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, onVi
             <div 
               key={user.id} 
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all"
-              onClick={() => onViewProfile(user)}
+              onClick={() => onNavigate('profile', user.id)}
             >
               <img src={user.avatarUrl} alt={user.name} className="w-20 h-20 rounded-full mx-auto" />
               <p className="mt-2 font-semibold text-gray-900 dark:text-white">{user.name}</p>
@@ -48,14 +47,14 @@ const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, onVi
         )}
       </section>
 
-      <section className="mt-12">
+      <section>
         <h2 className="text-2xl font-bold mb-4">Featured Pets</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {featuredPets.map(pet => (
             <div 
               key={pet.id} 
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden cursor-pointer group"
-              onClick={() => onViewPet(pet)}
+              onClick={() => onNavigate('pet', pet.id)}
             >
               <div className="aspect-w-1 aspect-h-1">
                 <img src={pet.avatarUrl} alt={pet.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform" />
@@ -68,7 +67,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = ({ currentUser, allUsers, onVi
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 };
 

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { User, Pet } from '../types';
-import XIcon from './icons/XIcon';
+import XMarkIcon from './icons/XMarkIcon';
 
 interface RequestPlaydateModalProps {
   currentUser: User;
@@ -17,9 +18,9 @@ const RequestPlaydateModal: React.FC<RequestPlaydateModalProps> = ({
   onClose,
   onSendRequest,
 }) => {
-  const [selectedPetId, setSelectedPetId] = useState(currentUser.pets[0]?.id || '');
-  const [date, setDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [location, setLocation] = useState('Virtual Park');
+  const [selectedPetId, setSelectedPetId] = React.useState(currentUser.pets[0]?.id || '');
+  const [date, setDate] = React.useState(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [location, setLocation] = React.useState('Central Park');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,14 +34,20 @@ const RequestPlaydateModal: React.FC<RequestPlaydateModalProps> = ({
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">Request a Playdate</h2>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-            <XIcon />
+            <XMarkIcon className="h-5 w-5"/>
           </button>
         </div>
         
-        <div className="flex items-center space-x-4 mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-            <img src={currentUser.pets.find(p => p.id === selectedPetId)?.avatarUrl || ''} className="h-12 w-12 rounded-full" />
-            <span className="text-xl font-bold">&harr;</span>
-            <img src={targetPet.avatarUrl} className="h-12 w-12 rounded-full" />
+        <div className="flex items-center justify-center space-x-4 mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <div className="text-center">
+                <img src={currentUser.pets.find(p => p.id === selectedPetId)?.avatarUrl || ''} className="h-16 w-16 rounded-full mx-auto" alt="Your pet"/>
+                <p className="text-sm font-semibold mt-1">{currentUser.pets.find(p => p.id === selectedPetId)?.name}</p>
+            </div>
+            <span className="text-xl font-bold text-gray-400 dark:text-gray-500">&harr;</span>
+            <div className="text-center">
+                <img src={targetPet.avatarUrl} className="h-16 w-16 rounded-full mx-auto" alt={targetPet.name}/>
+                <p className="text-sm font-semibold mt-1">{targetPet.name}</p>
+            </div>
         </div>
 
         <form onSubmit={handleSubmit}>
