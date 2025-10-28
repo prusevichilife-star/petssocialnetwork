@@ -1,5 +1,7 @@
+
 import React from 'react';
-import { ActivityFeedItem, User, Pet } from '../types';
+import { User, Pet } from '../types';
+import { EnrichedActivity } from '../App';
 import { timeAgo } from '../utils';
 import HeartIcon from './icons/HeartIcon';
 import FlagIcon from './icons/FlagIcon';
@@ -9,7 +11,8 @@ import ScissorsIcon from './icons/ScissorsIcon';
 import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
 
 interface PetActivityCardProps {
-  activity: ActivityFeedItem;
+  activity: EnrichedActivity;
+  currentUser: User;
   onLike: (activityId: string) => void;
   onViewProfile: (user: User) => void;
   onViewPet: (pet: Pet) => void;

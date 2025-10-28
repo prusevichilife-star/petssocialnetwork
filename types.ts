@@ -66,6 +66,13 @@ export interface Pet {
   favoriteItems?: FavoriteItem[];
 }
 
+export interface FriendRequest {
+    id: string;
+    fromUserId: string;
+    toUserId: string;
+    status: 'pending';
+}
+
 export interface User {
   id:string;
   name: string;
@@ -76,39 +83,30 @@ export interface User {
   status: UserStatus;
   friends: string[];
   privacySettings: PrivacySettings;
-  incomingFriendRequests: string[];
-  outgoingFriendRequests: string[];
+  incomingFriendRequests: FriendRequest[];
+  outgoingFriendRequests: FriendRequest[];
+  likedFeedItems: string[];
 }
 
 export interface Post {
   id: string;
   type: 'post';
-  user: User;
+  userId: string;
   content: string;
   date: string; // ISO String
   likeCount: number;
-  isLiked: boolean;
-  pet?: Pet;
+  petId?: string;
 }
 
 export interface ActivityFeedItem extends Omit<PetActivity, 'id'> {
   id: string;
   type: 'activity';
-  user: User;
-  pet: Pet;
+  userId: string;
+  petId: string;
   likeCount: number;
-  isLiked: boolean;
 }
 
 export type FeedItem = Post | ActivityFeedItem;
-
-
-export interface FriendRequest {
-    id: string;
-    fromUserId: string;
-    toUserId: string;
-    status: 'pending';
-}
 
 export type PlaydateStatus = 'pending' | 'accepted' | 'declined';
 
@@ -130,4 +128,12 @@ export interface Message {
     content: string;
     timestamp: string; // ISO String
     read: boolean;
+}
+
+export interface UserDatabase {
+  user: User;
+  posts: Post[];
+  activities: ActivityFeedItem[];
+  messages: Message[];
+  playdates: Playdate[];
 }

@@ -1,25 +1,28 @@
+
 import React from 'react';
-import { Post, User, Pet } from '../types';
+import { Pet, User } from '../types';
+import { EnrichedPost } from '../App';
 import HeartIcon from './icons/HeartIcon';
 import { timeAgo } from '../utils';
 
 
 interface PostCardProps {
-  post: Post;
-  allUsers: User[];
+  post: EnrichedPost;
+  allUsers: {[key: string]: User};
+  currentUser: User;
   onLike: (postId: string) => void;
   onViewProfile: (user: User) => void;
   onViewPet: (pet: Pet) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, allUsers, onLike, onViewProfile, onViewPet }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, allUsers, onLike, onViewProfile, onViewPet, currentUser }) => {
   const renderContentWithMentions = (content: string) => {
     const mentionRegex = /@(\w+)/g;
     const parts = content.split(mentionRegex);
 
     return parts.map((part, index) => {
         if (index % 2 === 1) { // This is a username
-            const mentionedUser = allUsers.find(u => u.username.toLowerCase() === part.toLowerCase());
+            const mentionedUser = Object.values(allUsers).find(u => u.username.toLowerCase() === part.toLowerCase());
             if (mentionedUser) {
                 return (
                     <strong
@@ -38,7 +41,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, allUsers, onLike, onViewProfi
         return <React.Fragment key={index}>{part}</React.Fragment>;
     });
 };
-
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">

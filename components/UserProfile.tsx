@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User, Pet, PrivacySettings, Visibility } from '../types';
+import { User, Pet, PrivacySettings, Visibility, FriendRequest } from '../types';
 import PrivacySettingsComponent from './PrivacySettings';
 import LockIcon from './icons/LockIcon';
 import UsersIcon from './icons/UsersIcon';
@@ -37,14 +37,8 @@ const UserProfile: React.FC<UserProfileProps> = ({
   const isOwner = currentUser.id === user.id;
   const areFriends = user.friends.includes(currentUser.id);
   
-  const outgoingRequest = currentUser.outgoingFriendRequests.some(reqId => 
-    Object.values(allUsers).some(u => u.id === user.id && u.incomingFriendRequests.includes(reqId))
-  );
-    
-  const incomingRequest = currentUser.incomingFriendRequests.find(reqId => 
-    user.outgoingFriendRequests.includes(reqId)
-  );
-
+  const outgoingRequest = currentUser.outgoingFriendRequests.some(req => req.toUserId === user.id);
+  const incomingRequest = currentUser.incomingFriendRequests.find(req => req.fromUserId === user.id);
 
   const canView = (section: keyof PrivacySettings): boolean => {
     if (isOwner) return true;
@@ -78,8 +72,8 @@ const UserProfile: React.FC<UserProfileProps> = ({
     if (incomingRequest) {
       return (
         <div className="flex space-x-2">
-            <button onClick={() => onRespondToFriendRequest(incomingRequest, true)} className="px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white font-semibold rounded-full">Accept</button>
-            <button onClick={() => onRespondToFriendRequest(incomingRequest, false)} className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full">Decline</button>
+            <button onClick={() => onRespondToFriendRequest(incomingRequest.id, true)} className="px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white font-semibold rounded-full">Accept</button>
+            <button onClick={() => onRespondToFriendRequest(incomingRequest.id, false)} className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full">Decline</button>
         </div>
       );
     }
