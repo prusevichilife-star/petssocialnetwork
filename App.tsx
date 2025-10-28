@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { Post, User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement } from './types';
+import { Post, User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem } from './types';
 import Header from './components/Header';
 import CreatePostForm from './components/CreatePostForm';
 import PostCard from './components/PostCard';
@@ -35,6 +35,11 @@ const initialPets: { [key: string]: Pet } = {
         { id: 'ach-1', title: 'Certified Good Boy', date: '2019-01-15', icon: 'trophy' },
         { id: 'ach-2', title: 'Completed Puppy Training', date: '2018-09-01', icon: 'trophy' },
     ],
+    favoriteItems: [
+        { id: 'fav-1', name: 'Squeaky Tennis Ball', category: 'Toy' },
+        { id: 'fav-2', name: 'Peanut Butter Treats', category: 'Food' },
+        { id: 'fav-3', name: 'Morning Park Runs', category: 'Activity' },
+    ],
   },
   'pet-2': { 
     id: 'pet-2', 
@@ -53,6 +58,10 @@ const initialPets: { [key: string]: Pet } = {
     healthLog: [],
     achievements: [
         { id: 'ach-3', title: 'Mastered the Art of Napping', date: '2021-03-20', icon: 'trophy' },
+    ],
+    favoriteItems: [
+        { id: 'fav-4', name: 'Feather Wand', category: 'Toy' },
+        { id: 'fav-5', name: 'Sunbathing', category: 'Activity' },
     ],
   },
   'pet-3': { 
@@ -73,6 +82,7 @@ const initialPets: { [key: string]: Pet } = {
     privacySettings: { profile: 'friends', playdates: 'private' },
     healthLog: [],
     achievements: [],
+    favoriteItems: [],
   },
   'pet-4': { 
     id: 'pet-4', 
@@ -89,6 +99,7 @@ const initialPets: { [key: string]: Pet } = {
     privacySettings: { profile: 'private', playdates: 'private' },
     healthLog: [],
     achievements: [],
+    favoriteItems: [],
   },
 };
 
@@ -442,6 +453,43 @@ const App: React.FC = () => {
       return newUsers;
     });
   };
+  
+  const handleAddFavoriteItem = (petId: string, newItem: Omit<FavoriteItem, 'id'>) => {
+    setUsers(prevUsers => {
+        const newUsers = { ...prevUsers };
+        let ownerId: string | null = null;
+        for (const userId in newUsers) {
+            const user = newUsers[userId];
+            const petIndex = user.pets.findIndex(p => p.id === petId);
+            if (petIndex !== -1) {
+                ownerId = userId;
+                const updatedPet = {
+                    ...user.pets[petIndex],
+                    favoriteItems: [
+                        ...(user.pets[petIndex].favoriteItems || []),
+                        { ...newItem, id: `fav-${Date.now()}` },
+                    ],
+                };
+                user.pets[petIndex] = updatedPet;
+                if (viewingPet?.id === petId) {
+                    setViewingPet(updatedPet);
+                }
+                break;
+            }
+        }
+        
+        if (ownerId) {
+          if (currentUser?.id === ownerId) {
+            setCurrentUser(newUsers[ownerId]);
+          }
+          if (viewingProfile?.id === ownerId) {
+            setViewingProfile(newUsers[ownerId]);
+          }
+        }
+
+        return newUsers;
+    });
+  };
 
   const handleSendFriendRequest = (toUserId: string) => {
     if (!currentUser) return;
@@ -602,6 +650,7 @@ const App: React.FC = () => {
           onAddPetPhoto={handleAddPetPhoto}
           onAddHealthLogEntry={handleAddHealthLogEntry}
           onAddPetAchievement={handleAddPetAchievement}
+          onAddFavoriteItem={handleAddFavoriteItem}
         />
       );
     }

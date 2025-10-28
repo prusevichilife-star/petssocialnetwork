@@ -30,6 +30,14 @@ export interface PetAchievement {
   icon: 'trophy';
 }
 
+export type FavoriteItemCategory = 'Toy' | 'Food' | 'Activity';
+
+export interface FavoriteItem {
+  id: string;
+  name: string;
+  category: FavoriteItemCategory;
+}
+
 export interface Pet {
   id: string;
   name: string;
@@ -43,6 +51,7 @@ export interface Pet {
   privacySettings: PetPrivacySettings;
   healthLog?: HealthLogEntry[];
   achievements?: PetAchievement[];
+  favoriteItems?: FavoriteItem[];
 }
 
 export interface User {

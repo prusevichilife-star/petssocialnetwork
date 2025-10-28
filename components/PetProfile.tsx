@@ -1,6 +1,7 @@
 
+
 import React, { useState, useRef } from 'react';
-import { Pet, User, Playdate, PetPrivacySettings, Visibility, HealthLogEntry, PetAchievement, HealthLogEntryType } from '../types';
+import { Pet, User, Playdate, PetPrivacySettings, Visibility, HealthLogEntry, PetAchievement, HealthLogEntryType, FavoriteItemCategory, FavoriteItem } from '../types';
 import PawIcon from './icons/PawIcon';
 import CakeIcon from './icons/CakeIcon';
 import TagIcon from './icons/TagIcon';
@@ -13,6 +14,10 @@ import BuildingOfficeIcon from './icons/BuildingOfficeIcon';
 import BeakerIcon from './icons/BeakerIcon';
 import PillIcon from './icons/PillIcon';
 import TrophyIcon from './icons/TrophyIcon';
+import SparklesIcon from './icons/SparklesIcon';
+import CubeTransparentIcon from './icons/CubeTransparentIcon';
+import ShoppingBagIcon from './icons/ShoppingBagIcon';
+import SunIcon from './icons/SunIcon';
 
 interface PetProfileProps {
   pet: Pet;
@@ -25,6 +30,7 @@ interface PetProfileProps {
   onAddPetPhoto: (petId: string, photoUrl: string) => void;
   onAddHealthLogEntry: (petId: string, newEntry: Omit<HealthLogEntry, 'id'>) => void;
   onAddPetAchievement: (petId: string, newAchievement: Omit<PetAchievement, 'id'>) => void;
+  onAddFavoriteItem: (petId: string, newItem: Omit<FavoriteItem, 'id'>) => void;
 }
 
 const calculateAge = (birthdate: string): string => {
@@ -46,7 +52,7 @@ const InfoPill: React.FC<{ icon: React.ReactNode; label: string; value: string }
     </div>
 );
 
-const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, allPlaydates, onReturn, onViewPet, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement }) => {
+const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, allPlaydates, onReturn, onViewPet, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement, onAddFavoriteItem }) => {
   const age = calculateAge(pet.birthdate);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -59,6 +65,10 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
   const [newHealthLogDate, setNewHealthLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [newHealthLogNotes, setNewHealthLogNotes] = useState('');
   
+  const [showFavoriteForm, setShowFavoriteForm] = useState(false);
+  const [newFavoriteName, setNewFavoriteName] = useState('');
+  const [newFavoriteCategory, setNewFavoriteCategory] = useState<FavoriteItemCategory>('Toy');
+
   const owner = Object.values(allUsers).find(user => user.pets.some(p => p.id === pet.id));
   const isOwner = owner?.id === currentUser.id;
   const areFriends = owner?.friends.includes(currentUser.id) ?? false;
@@ -123,12 +133,39 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
       setShowHealthLogForm(false);
     }
   };
+
+  const handleAddFavoriteItemSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newFavoriteName.trim()) {
+      onAddFavoriteItem(pet.id, {
+        name: newFavoriteName.trim(),
+        category: newFavoriteCategory,
+      });
+      setNewFavoriteName('');
+      setNewFavoriteCategory('Toy');
+      setShowFavoriteForm(false);
+    }
+  };
   
   const healthLogIcons: Record<HealthLogEntryType, React.ReactNode> = {
     'Vet Visit': <BuildingOfficeIcon />,
     'Vaccination': <BeakerIcon />,
     'Medication': <PillIcon />,
   };
+  
+  const favoriteIcons: Record<FavoriteItemCategory, React.ReactNode> = {
+    'Toy': <CubeTransparentIcon />,
+    'Food': <ShoppingBagIcon />,
+    'Activity': <SunIcon />,
+  };
+
+  const favoriteItemsByCategory = (pet.favoriteItems || []).reduce((acc, item) => {
+    if (!acc[item.category]) {
+      acc[item.category] = [];
+    }
+    acc[item.category].push(item);
+    return acc;
+  }, {} as Record<FavoriteItemCategory, FavoriteItem[]>);
   
   const playPals = pet.friends.map(findPetById).filter((p): p is Pet => p !== undefined);
   
@@ -186,6 +223,61 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
                     <InfoPill icon={<CakeIcon />} label="Age" value={age} />
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{pet.bio}</p>
+                
+                 <div className="mt-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold flex items-center"><SparklesIcon /> <span className="ml-2">Favorite Things</span></h2>
+                        {isOwner && (
+                            <button 
+                                onClick={() => setShowFavoriteForm(!showFavoriteForm)}
+                                className="px-3 py-1.5 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-semibold rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors"
+                            >
+                                {showFavoriteForm ? 'Cancel' : 'Add Favorite'}
+                            </button>
+                        )}
+                    </div>
+                    
+                    {isOwner && showFavoriteForm && (
+                        <form onSubmit={handleAddFavoriteItemSubmit} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-4 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="fav-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                                    <input type="text" id="fav-name" value={newFavoriteName} onChange={e => setNewFavoriteName(e.target.value)} className="mt-1 block w-full p-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-900" placeholder="e.g., Squeaky Tennis Ball" required />
+                                </div>
+                                <div>
+                                    <label htmlFor="fav-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                                    <select id="fav-category" value={newFavoriteCategory} onChange={e => setNewFavoriteCategory(e.target.value as FavoriteItemCategory)} className="mt-1 block w-full p-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-900">
+                                        <option>Toy</option>
+                                        <option>Food</option>
+                                        <option>Activity</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700">Save Favorite</button>
+                            </div>
+                        </form>
+                    )}
+
+                    {(pet.favoriteItems && pet.favoriteItems.length > 0) ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {(Object.keys(favoriteItemsByCategory) as FavoriteItemCategory[]).map(category => (
+                                <div key={category} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                                    <h3 className="font-bold flex items-center mb-2 text-gray-800 dark:text-gray-200">
+                                        {favoriteIcons[category]}
+                                        <span className="ml-2">{category}s</span>
+                                    </h3>
+                                    <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-1">
+                                        {favoriteItemsByCategory[category].map(item => <li key={item.id}>{item.name}</li>)}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No favorite items listed yet.</p>
+                    )}
+                </div>
+
                  <div className="mt-8">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold">Achievements</h2>
