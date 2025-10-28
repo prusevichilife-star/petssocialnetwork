@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback } from 'react';
-import { Post, User, Pet, Role, UserStatus, Visibility, PrivacySettings } from './types';
+import { Post, User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement } from './types';
 import Header from './components/Header';
 import CreatePostForm from './components/CreatePostForm';
 import PostCard from './components/PostCard';
@@ -8,6 +9,7 @@ import Mfa from './components/Mfa';
 import AdminDashboard from './components/AdminDashboard';
 import UserProfile from './components/UserProfile';
 import PetProfile from './components/PetProfile';
+import RequestPlaydateModal from './components/RequestPlaydateModal';
 
 const initialPets: { [key: string]: Pet } = {
   'pet-1': { 
@@ -23,6 +25,16 @@ const initialPets: { [key: string]: Pet } = {
       'https://picsum.photos/seed/buddy-2/400/300',
       'https://picsum.photos/seed/buddy-3/400/300',
     ],
+    friends: [],
+    privacySettings: { profile: 'public', playdates: 'friends' },
+    healthLog: [
+        { id: 'hl-1', type: 'Vaccination', date: '2022-06-01', notes: 'Annual booster shots.' },
+        { id: 'hl-2', type: 'Vet Visit', date: '2023-01-10', notes: 'Checkup, all clear.' },
+    ],
+    achievements: [
+        { id: 'ach-1', title: 'Certified Good Boy', date: '2019-01-15', icon: 'trophy' },
+        { id: 'ach-2', title: 'Completed Puppy Training', date: '2018-09-01', icon: 'trophy' },
+    ],
   },
   'pet-2': { 
     id: 'pet-2', 
@@ -35,6 +47,12 @@ const initialPets: { [key: string]: Pet } = {
     photos: [
         'https://picsum.photos/seed/lucy-1/400/300',
         'https://picsum.photos/seed/lucy-2/400/300',
+    ],
+    friends: [],
+    privacySettings: { profile: 'friends', playdates: 'friends' },
+    healthLog: [],
+    achievements: [
+        { id: 'ach-3', title: 'Mastered the Art of Napping', date: '2021-03-20', icon: 'trophy' },
     ],
   },
   'pet-3': { 
@@ -51,6 +69,10 @@ const initialPets: { [key: string]: Pet } = {
         'https://picsum.photos/seed/max-3/400/300',
         'https://picsum.photos/seed/max-4/400/300',
     ],
+    friends: [],
+    privacySettings: { profile: 'friends', playdates: 'private' },
+    healthLog: [],
+    achievements: [],
   },
   'pet-4': { 
     id: 'pet-4', 
@@ -63,13 +85,17 @@ const initialPets: { [key: string]: Pet } = {
     photos: [
         'https://picsum.photos/seed/chloe-1/400/300',
     ],
+    friends: [],
+    privacySettings: { profile: 'private', playdates: 'private' },
+    healthLog: [],
+    achievements: [],
   },
 };
 
 const initialUsersData: { [key: string]: Omit<User, 'id'> } = {
-  'user-1': { name: 'Alice Johnson', username: 'alicej', avatarUrl: 'https://picsum.photos/seed/alice/100/100', pets: [initialPets['pet-1']], role: 'admin', status: 'active', friends: ['user-2'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public' } },
-  'user-2': { name: 'Bob Williams', username: 'bobw', avatarUrl: 'https://picsum.photos/seed/bob/100/100', pets: [initialPets['pet-2'], initialPets['pet-3']], role: 'moderator', status: 'active', friends: ['user-1', 'user-3'], privacySettings: { profileBasics: 'public', pets: 'friends', activity: 'public' } },
-  'user-3': { name: 'Charlie Brown', username: 'charlieb', avatarUrl: 'https://picsum.photos/seed/charlie/100/100', pets: [initialPets['pet-4']], role: 'user', status: 'active', friends: ['user-2'], privacySettings: { profileBasics: 'friends', pets: 'friends', activity: 'private' } },
+  'user-1': { name: 'Alice Johnson', username: 'alicej', avatarUrl: 'https://picsum.photos/seed/alice/100/100', pets: [initialPets['pet-1']], role: 'admin', status: 'active', friends: ['user-2'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-2': { name: 'Bob Williams', username: 'bobw', avatarUrl: 'https://picsum.photos/seed/bob/100/100', pets: [initialPets['pet-2'], initialPets['pet-3']], role: 'moderator', status: 'active', friends: ['user-1'], privacySettings: { profileBasics: 'public', pets: 'friends', activity: 'public', friends: 'friends' }, incomingFriendRequests: ['req-1'], outgoingFriendRequests: [] },
+  'user-3': { name: 'Charlie Brown', username: 'charlieb', avatarUrl: 'https://picsum.photos/seed/charlie/100/100', pets: [initialPets['pet-4']], role: 'user', status: 'active', friends: [], privacySettings: { profileBasics: 'friends', pets: 'friends', activity: 'private', friends: 'private' }, incomingFriendRequests: [], outgoingFriendRequests: ['req-1'] },
 };
 
 const initialUsers: { [key: string]: User } = Object.fromEntries(
@@ -107,16 +133,30 @@ const initialPosts: Post[] = [
   },
 ];
 
+const initialFriendRequests: { [key: string]: FriendRequest } = {
+    'req-1': { id: 'req-1', fromUserId: 'user-3', toUserId: 'user-2', status: 'pending' },
+};
+
+const initialPlaydates: { [key: string]: Playdate } = {
+    'pd-1': { id: 'pd-1', fromPetId: 'pet-1', fromUserId: 'user-1', toPetId: 'pet-4', toUserId: 'user-3', status: 'pending', date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), location: 'Virtual Park' }
+};
+
 type AuthState = 'loggedOut' | 'needsMfa' | 'loggedIn' | 'adminDashboard';
 type LoginResult = 'success' | 'notFound' | 'suspended';
 
 const App: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [users, setUsers] = useState<{ [key: string]: User }>(initialUsers);
+  const [friendRequests, setFriendRequests] = useState<{ [key: string]: FriendRequest }>(initialFriendRequests);
+  const [playdates, setPlaydates] = useState<{ [key: string]: Playdate }>(initialPlaydates);
+
   const [authState, setAuthState] = useState<AuthState>('loggedIn');
-  const [currentUser, setCurrentUser] = useState<User | null>(initialUsers['user-3']);
+  const [currentUser, setCurrentUser] = useState<User | null>(initialUsers['user-2']);
   const [viewingProfile, setViewingProfile] = useState<User | null>(null);
   const [viewingPet, setViewingPet] = useState<Pet | null>(null);
+
+  const [isPlaydateModalOpen, setIsPlaydateModalOpen] = useState(false);
+  const [playdateTarget, setPlaydateTarget] = useState<{user: User, pet: Pet} | null>(null);
 
   const handleLogin = (username: string): LoginResult => {
     const user = Object.values(users).find(u => u.username === username);
@@ -255,6 +295,257 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdatePetPrivacySettings = (petId: string, section: keyof PetPrivacySettings, visibility: Visibility | 'private' | 'friends') => {
+      setUsers(prevUsers => {
+        const newUsers = { ...prevUsers };
+        let ownerId: string | null = null;
+        
+        // Find owner and update pet
+        for (const userId in newUsers) {
+            const user = newUsers[userId];
+            const petIndex = user.pets.findIndex(p => p.id === petId);
+            if (petIndex !== -1) {
+                ownerId = userId;
+                const updatedPet = {
+                    ...user.pets[petIndex],
+                    privacySettings: {
+                        ...user.pets[petIndex].privacySettings,
+                        [section]: visibility,
+                    },
+                };
+                user.pets[petIndex] = updatedPet;
+                if (viewingPet?.id === petId) {
+                    setViewingPet(updatedPet);
+                }
+                break;
+            }
+        }
+
+        if (ownerId) {
+          if (currentUser?.id === ownerId) {
+            setCurrentUser(newUsers[ownerId]);
+          }
+          if (viewingProfile?.id === ownerId) {
+            setViewingProfile(newUsers[ownerId]);
+          }
+        }
+
+        return newUsers;
+      });
+  };
+
+  const handleAddPetPhoto = (petId: string, photoUrl: string) => {
+    setUsers(prevUsers => {
+        const newUsers = { ...prevUsers };
+        let ownerId: string | null = null;
+
+        for (const userId in newUsers) {
+            const user = newUsers[userId];
+            const petIndex = user.pets.findIndex(p => p.id === petId);
+            if (petIndex !== -1) {
+                ownerId = userId;
+                const updatedPet = {
+                    ...user.pets[petIndex],
+                    photos: [...user.pets[petIndex].photos, photoUrl],
+                };
+                user.pets[petIndex] = updatedPet;
+                if (viewingPet?.id === petId) {
+                    setViewingPet(updatedPet);
+                }
+                break;
+            }
+        }
+        
+        if (ownerId) {
+          if (currentUser?.id === ownerId) {
+            setCurrentUser(newUsers[ownerId]);
+          }
+          if (viewingProfile?.id === ownerId) {
+            setViewingProfile(newUsers[ownerId]);
+          }
+        }
+
+        return newUsers;
+    });
+  };
+
+  const handleAddHealthLogEntry = (petId: string, newEntry: Omit<HealthLogEntry, 'id'>) => {
+    setUsers(prevUsers => {
+        const newUsers = { ...prevUsers };
+        let ownerId: string | null = null;
+        for (const userId in newUsers) {
+            const user = newUsers[userId];
+            const petIndex = user.pets.findIndex(p => p.id === petId);
+            if (petIndex !== -1) {
+                ownerId = userId;
+                const updatedPet = {
+                    ...user.pets[petIndex],
+                    healthLog: [
+                        ...(user.pets[petIndex].healthLog || []),
+                        { ...newEntry, id: `hl-${Date.now()}` },
+                    ],
+                };
+                user.pets[petIndex] = updatedPet;
+                if (viewingPet?.id === petId) {
+                    setViewingPet(updatedPet);
+                }
+                break;
+            }
+        }
+        
+        if (ownerId) {
+          if (currentUser?.id === ownerId) {
+            setCurrentUser(newUsers[ownerId]);
+          }
+          if (viewingProfile?.id === ownerId) {
+            setViewingProfile(newUsers[ownerId]);
+          }
+        }
+
+        return newUsers;
+    });
+  };
+
+  const handleAddPetAchievement = (petId: string, newAchievement: Omit<PetAchievement, 'id'>) => {
+    setUsers(prevUsers => {
+      const newUsers = { ...prevUsers };
+      let ownerId: string | null = null;
+      for (const userId in newUsers) {
+        const user = newUsers[userId];
+        const petIndex = user.pets.findIndex(p => p.id === petId);
+        if (petIndex !== -1) {
+          ownerId = userId;
+          const updatedPet = {
+            ...user.pets[petIndex],
+            achievements: [
+              ...(user.pets[petIndex].achievements || []),
+              { ...newAchievement, id: `ach-${Date.now()}` },
+            ],
+          };
+          user.pets[petIndex] = updatedPet;
+          if (viewingPet?.id === petId) {
+            setViewingPet(updatedPet);
+          }
+          break;
+        }
+      }
+
+      if (ownerId) {
+        if (currentUser?.id === ownerId) {
+          setCurrentUser(newUsers[ownerId]);
+        }
+        if (viewingProfile?.id === ownerId) {
+          setViewingProfile(newUsers[ownerId]);
+        }
+      }
+
+      return newUsers;
+    });
+  };
+
+  const handleSendFriendRequest = (toUserId: string) => {
+    if (!currentUser) return;
+    const fromUserId = currentUser.id;
+    if (fromUserId === toUserId) return;
+
+    const newReqId = `req-${Date.now()}`;
+    const newRequest: FriendRequest = { id: newReqId, fromUserId, toUserId, status: 'pending' };
+
+    setFriendRequests(prev => ({ ...prev, [newReqId]: newRequest }));
+
+    const updatedUsers = { ...users };
+    updatedUsers[fromUserId] = { ...updatedUsers[fromUserId], outgoingFriendRequests: [...updatedUsers[fromUserId].outgoingFriendRequests, newReqId] };
+    updatedUsers[toUserId] = { ...updatedUsers[toUserId], incomingFriendRequests: [...updatedUsers[toUserId].incomingFriendRequests, newReqId] };
+    
+    setUsers(updatedUsers);
+    if (viewingProfile?.id === fromUserId) setViewingProfile(updatedUsers[fromUserId]);
+    if (currentUser?.id === fromUserId) setCurrentUser(updatedUsers[fromUserId]);
+    if (viewingProfile?.id === toUserId) setViewingProfile(updatedUsers[toUserId]);
+    if (currentUser?.id === toUserId) setCurrentUser(updatedUsers[toUserId]);
+  };
+
+  const handleRespondToFriendRequest = (requestId: string, accepted: boolean) => {
+    const request = friendRequests[requestId];
+    if (!request) return;
+
+    const { fromUserId, toUserId } = request;
+
+    let updatedUsers = { ...users };
+    updatedUsers[fromUserId] = { ...updatedUsers[fromUserId], outgoingFriendRequests: updatedUsers[fromUserId].outgoingFriendRequests.filter(id => id !== requestId) };
+    updatedUsers[toUserId] = { ...updatedUsers[toUserId], incomingFriendRequests: updatedUsers[toUserId].incomingFriendRequests.filter(id => id !== requestId) };
+    
+    if (accepted) {
+        updatedUsers[fromUserId].friends = [...updatedUsers[fromUserId].friends, toUserId];
+        updatedUsers[toUserId].friends = [...updatedUsers[toUserId].friends, fromUserId];
+    }
+
+    setUsers(updatedUsers);
+    if (currentUser?.id === fromUserId || currentUser?.id === toUserId) {
+        setCurrentUser(updatedUsers[currentUser.id]);
+    }
+
+    const { [requestId]: _, ...remainingRequests } = friendRequests;
+    setFriendRequests(remainingRequests);
+  };
+
+  const handleOpenPlaydateModal = (user: User, pet: Pet) => {
+    setPlaydateTarget({ user, pet });
+    setIsPlaydateModalOpen(true);
+  };
+
+  const handleSendPlaydateRequest = (fromPetId: string, date: string, location: string) => {
+    if (!currentUser || !playdateTarget) return;
+
+    const newPlaydateId = `pd-${Date.now()}`;
+    const newPlaydate: Playdate = {
+      id: newPlaydateId,
+      fromPetId,
+      toPetId: playdateTarget.pet.id,
+      fromUserId: currentUser.id,
+      toUserId: playdateTarget.user.id,
+      status: 'pending',
+      date,
+      location,
+    };
+
+    setPlaydates(prev => ({...prev, [newPlaydateId]: newPlaydate}));
+    setIsPlaydateModalOpen(false);
+    setPlaydateTarget(null);
+  };
+
+  const handleRespondToPlaydateRequest = (playdateId: string, accepted: boolean) => {
+      const playdate = playdates[playdateId];
+      if (!playdate) return;
+      
+      const updatedPlaydates = {
+        ...playdates,
+        // Fix: Use 'as const' to assert literal types for 'status', preventing type widening to 'string'.
+        [playdateId]: { ...playdate, status: accepted ? 'accepted' as const : 'declined' as const }
+      };
+      setPlaydates(updatedPlaydates);
+
+      if (accepted) {
+        setUsers(prevUsers => {
+            const newUsers = {...prevUsers};
+            const fromUser = {...newUsers[playdate.fromUserId]};
+            const toUser = {...newUsers[playdate.toUserId]};
+
+            fromUser.pets = fromUser.pets.map(p => p.id === playdate.fromPetId ? {...p, friends: [...p.friends, playdate.toPetId] } : p);
+            toUser.pets = toUser.pets.map(p => p.id === playdate.toPetId ? {...p, friends: [...p.friends, playdate.fromPetId] } : p);
+
+            newUsers[playdate.fromUserId] = fromUser;
+            newUsers[playdate.toUserId] = toUser;
+            
+            if (currentUser?.id === fromUser.id) setCurrentUser(fromUser);
+            if (currentUser?.id === toUser.id) setCurrentUser(toUser);
+            if (viewingProfile?.id === fromUser.id) setViewingProfile(fromUser);
+            if (viewingProfile?.id === toUser.id) setViewingProfile(toUser);
+            
+            return newUsers;
+        });
+      }
+  };
+
   if (authState === 'loggedOut') {
     return <Login onLogin={handleLogin} />;
   }
@@ -302,7 +593,15 @@ const App: React.FC = () => {
       return (
         <PetProfile 
           pet={viewingPet} 
+          currentUser={currentUser}
+          allUsers={users}
+          allPlaydates={Object.values(playdates)}
           onReturn={() => setViewingPet(null)}
+          onViewPet={handleViewPet}
+          onUpdatePetPrivacySettings={handleUpdatePetPrivacySettings}
+          onAddPetPhoto={handleAddPetPhoto}
+          onAddHealthLogEntry={handleAddHealthLogEntry}
+          onAddPetAchievement={handleAddPetAchievement}
         />
       );
     }
@@ -312,9 +611,13 @@ const App: React.FC = () => {
         <UserProfile 
           user={viewingProfile} 
           currentUser={currentUser}
+          allUsers={Object.values(users)}
           onReturnToFeed={handleReturnToFeed}
           onUpdatePrivacySettings={handleUpdatePrivacySettings}
           onViewPet={handleViewPet}
+          onSendFriendRequest={handleSendFriendRequest}
+          onRespondToFriendRequest={handleRespondToFriendRequest}
+          onOpenPlaydateModal={handleOpenPlaydateModal}
         />
       );
     }
@@ -336,11 +639,25 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
       <Header
         user={currentUser}
+        allUsers={users}
+        allFriendRequests={Object.values(friendRequests).filter(req => req.toUserId === currentUser.id)}
+        allPlaydates={Object.values(playdates).filter(pd => pd.toUserId === currentUser.id && pd.status === 'pending')}
         onLogout={handleLogout}
         onNavigateToDashboard={handleNavigateToDashboard}
         onViewProfile={() => handleViewProfile(currentUser)}
+        onRespondToFriendRequest={handleRespondToFriendRequest}
+        onRespondToPlaydateRequest={handleRespondToPlaydateRequest}
       />
       <MainContent />
+       {isPlaydateModalOpen && playdateTarget && (
+        <RequestPlaydateModal
+          currentUser={currentUser}
+          targetPet={playdateTarget.pet}
+          targetUser={playdateTarget.user}
+          onClose={() => setIsPlaydateModalOpen(false)}
+          onSendRequest={handleSendPlaydateRequest}
+        />
+      )}
     </div>
   );
 };

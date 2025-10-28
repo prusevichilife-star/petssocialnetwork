@@ -8,16 +8,17 @@ interface PrivacySettingsProps {
 
 const PrivacySettingRow: React.FC<{
     label: string;
+    description: string;
     section: keyof PrivacySettings;
     value: Visibility;
     onChange: (section: keyof PrivacySettings, value: Visibility) => void;
-}> = ({ label, section, value, onChange }) => {
+}> = ({ label, description, section, value, onChange }) => {
     return (
         <div className="flex items-center justify-between py-4">
             <div>
                 <p className="font-medium text-gray-800 dark:text-gray-200">{label}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Control who can see this on your profile and in the feed.
+                    {description}
                 </p>
             </div>
             <select
@@ -44,18 +45,28 @@ const PrivacySettingsComponent: React.FC<PrivacySettingsProps> = ({ settings, on
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <PrivacySettingRow 
             label="Profile Basics"
+            description="Your name, username, and avatar."
             section="profileBasics"
             value={settings.profileBasics}
             onChange={onUpdate}
         />
         <PrivacySettingRow 
             label="Your Pets"
+            description="Who can see the pets on your profile."
             section="pets"
             value={settings.pets}
             onChange={onUpdate}
         />
         <PrivacySettingRow 
+            label="Your Friends"
+            description="Who can see your friends list."
+            section="friends"
+            value={settings.friends}
+            onChange={onUpdate}
+        />
+        <PrivacySettingRow 
             label="Your Activity"
+            description="Who can see your posts in the feed."
             section="activity"
             value={settings.activity}
             onChange={onUpdate}

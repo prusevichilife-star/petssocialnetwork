@@ -1,11 +1,18 @@
-import React from 'react';
-import { User } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, FriendRequest, Playdate } from '../types';
+import BellIcon from './icons/BellIcon';
+import NotificationsDropdown from './NotificationsDropdown';
 
 interface HeaderProps {
   user: User;
+  allUsers: { [key: string]: User };
+  allFriendRequests: FriendRequest[];
+  allPlaydates: Playdate[];
   onLogout: () => void;
   onNavigateToDashboard: () => void;
   onViewProfile: () => void;
+  onRespondToFriendRequest: (requestId: string, accepted: boolean) => void;
+  onRespondToPlaydateRequest: (playdateId: string, accepted: boolean) => void;
 }
 
 const RoleBadge: React.FC<{ role: 'admin' | 'moderator' }> = ({ role }) => {
@@ -20,7 +27,25 @@ const RoleBadge: React.FC<{ role: 'admin' | 'moderator' }> = ({ role }) => {
   );
 };
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigateToDashboard, onViewProfile }) => {
+const Header: React.FC<HeaderProps> = ({ user, allUsers, allFriendRequests, allPlaydates, onLogout, onNavigateToDashboard, onViewProfile, onRespondToFriendRequest, onRespondToPlaydateRequest }) => {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  const notificationCount = allFriendRequests.length + allPlaydates.length;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <header className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -40,6 +65,31 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigateToDashboard, 
             <span className="ml-2 text-xl font-bold text-gray-800 dark:text-white">PetSocial</span>
           </div>
           <div className="flex items-center">
+            <div className="relative mr-4" ref={notificationsRef}>
+                <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    aria-label="Show notifications"
+                >
+                    <BellIcon />
+                    {notificationCount > 0 && (
+                      <span className="absolute top-0 right-0 block h-5 w-5 text-xs flex items-center justify-center transform -translate-y-1/2 translate-x-1/2 rounded-full bg-red-500 text-white ring-2 ring-white dark:ring-gray-800">
+                        {notificationCount}
+                      </span>
+                    )}
+                </button>
+                {showNotifications && (
+                    <NotificationsDropdown 
+                      user={user}
+                      allUsers={allUsers}
+                      friendRequests={allFriendRequests}
+                      playdates={allPlaydates}
+                      onRespondToFriendRequest={onRespondToFriendRequest}
+                      onRespondToPlaydateRequest={onRespondToPlaydateRequest}
+                    />
+                )}
+            </div>
+            
             <div
               className="flex items-center mr-4 cursor-pointer"
               onClick={onViewProfile}
