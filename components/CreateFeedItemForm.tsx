@@ -3,19 +3,25 @@ import React, { useState } from 'react';
 import { User, PetActivity, PetActivityCategory } from '../types';
 import PuzzlePieceIcon from './icons/PuzzlePieceIcon';
 import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
+import MentionSuggestions from './MentionSuggestions';
 
 
 interface CreateFeedItemFormProps {
   currentUser: User;
+  allUsers: User[];
   onCreatePost: (content: string, petId?: string) => void;
   onCreateActivity: (activityData: Omit<PetActivity, 'id'>, petId: string) => void;
 }
 
-const CreateFeedItemForm: React.FC<CreateFeedItemFormProps> = ({ currentUser, onCreatePost, onCreateActivity }) => {
+const CreateFeedItemForm: React.FC<CreateFeedItemFormProps> = ({ currentUser, allUsers, onCreatePost, onCreateActivity }) => {
   const [activeTab, setActiveTab] = useState<'post' | 'activity'>('post');
   
   // Post state
   const [postContent, setPostContent] = useState('');
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
 
   // Activity state
   const [selectedPetId, setSelectedPetId] = useState(currentUser.pets[0]?.id || '');
@@ -50,6 +56,59 @@ const CreateFeedItemForm: React.FC<CreateFeedItemFormProps> = ({ currentUser, on
     setActivityDescription('');
     setActivityPhotoUrl('');
   };
+
+  const handlePostContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setPostContent(value);
+
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      const query = mentionMatch[1];
+      setMentionQuery(query);
+      const filteredUsers = allUsers.filter(u =>
+        u.username.toLowerCase().startsWith(query.toLowerCase()) && u.id !== currentUser.id
+      ).slice(0, 5);
+
+      if (filteredUsers.length > 0) {
+        setSuggestions(filteredUsers);
+        setShowSuggestions(true);
+        setSuggestionIndex(0);
+      } else {
+        setShowSuggestions(false);
+      }
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectMention = (user: User) => {
+    const textBeforeMention = postContent.substring(0, postContent.lastIndexOf(`@${mentionQuery}`));
+    const textAfterMention = postContent.substring(postContent.lastIndexOf(`@${mentionQuery}`) + `@${mentionQuery}`.length);
+    
+    setPostContent(`${textBeforeMention}@${user.username} ${textAfterMention}`);
+    setShowSuggestions(false);
+    setMentionQuery('');
+  };
+
+  const handlePostKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSuggestionIndex(prev => (prev + 1) % suggestions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        handleSelectMention(suggestions[suggestionIndex]);
+      } else if (e.key === 'Escape') {
+        setShowSuggestions(false);
+      }
+    }
+  };
   
   const TabButton: React.FC<{tabName: 'post' | 'activity', label: string, icon: React.ReactNode}> = ({ tabName, label, icon }) => (
     <button
@@ -76,14 +135,22 @@ const CreateFeedItemForm: React.FC<CreateFeedItemFormProps> = ({ currentUser, on
         {activeTab === 'post' ? (
           <div className="flex items-start space-x-4">
             <img src={currentUser.avatarUrl} alt={currentUser.name} className="h-12 w-12 rounded-full" />
-            <form onSubmit={handlePostSubmit} className="w-full">
+            <form onSubmit={handlePostSubmit} className="w-full relative">
               <textarea
                 value={postContent}
-                onChange={(e) => setPostContent(e.target.value)}
-                placeholder="What's on your mind?"
+                onChange={handlePostContentChange}
+                onKeyDown={handlePostKeyDown}
+                placeholder="What's on your mind? Mention friends with @username!"
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-200"
                 rows={3}
               />
+              {showSuggestions && (
+                <MentionSuggestions 
+                  users={suggestions}
+                  onSelect={handleSelectMention}
+                  activeIndex={suggestionIndex}
+                />
+              )}
               <div className="flex justify-end mt-2">
                 <button
                   type="submit"

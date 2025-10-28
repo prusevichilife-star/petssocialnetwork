@@ -6,12 +6,40 @@ import { timeAgo } from '../utils';
 
 interface PostCardProps {
   post: Post;
+  allUsers: User[];
   onLike: (postId: string) => void;
   onViewProfile: (user: User) => void;
   onViewPet: (pet: Pet) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onLike, onViewProfile, onViewPet }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, allUsers, onLike, onViewProfile, onViewPet }) => {
+  const renderContentWithMentions = (content: string) => {
+    const mentionRegex = /@(\w+)/g;
+    const parts = content.split(mentionRegex);
+
+    return parts.map((part, index) => {
+        if (index % 2 === 1) { // This is a username
+            const mentionedUser = allUsers.find(u => u.username.toLowerCase() === part.toLowerCase());
+            if (mentionedUser) {
+                return (
+                    <strong
+                        key={`${index}-${part}`}
+                        className="text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onViewProfile(mentionedUser);
+                        }}
+                    >
+                        @{part}
+                    </strong>
+                );
+            }
+        }
+        return <React.Fragment key={index}>{part}</React.Fragment>;
+    });
+};
+
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
       <div className="p-4">
@@ -45,7 +73,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onViewProfile, onView
             )}
           </div>
         </div>
-        <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{post.content}</p>
+        <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{renderContentWithMentions(post.content)}</p>
       </div>
       <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700">
         <button

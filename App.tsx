@@ -743,12 +743,13 @@ const App: React.FC = () => {
             currentUser={currentUser} 
             onCreatePost={handleCreatePost}
             onCreateActivity={handleCreateActivity}
+            allUsers={Object.values(users)}
         />
         <FeedFilter activeFilter={activeFilter} onFilterChange={setActiveFilter} />
         <div className="mt-8 space-y-6">
           {visibleFeedItems.map(item => (
             item.type === 'post' ? (
-                <PostCard key={item.id} post={item} onLike={handleLikeFeedItem} onViewProfile={handleViewProfile} onViewPet={handleViewPet} />
+                <PostCard key={item.id} post={item} onLike={handleLikeFeedItem} onViewProfile={handleViewProfile} onViewPet={handleViewPet} allUsers={Object.values(users)} />
             ) : (
                 <PetActivityCard key={item.id} activity={item} onLike={handleLikeFeedItem} onViewProfile={handleViewProfile} onViewPet={handleViewPet} />
             )
