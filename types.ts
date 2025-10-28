@@ -38,6 +38,17 @@ export interface FavoriteItem {
   category: FavoriteItemCategory;
 }
 
+export type PetActivityCategory = 'Milestone' | 'Playtime' | 'Adventure' | 'Grooming';
+
+export interface PetActivity {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  description?: string;
+  photoUrl?: string;
+  category: PetActivityCategory;
+}
+
 export interface Pet {
   id: string;
   name: string;
@@ -52,6 +63,7 @@ export interface Pet {
   healthLog?: HealthLogEntry[];
   achievements?: PetAchievement[];
   favoriteItems?: FavoriteItem[];
+  activities?: PetActivity[];
 }
 
 export interface User {

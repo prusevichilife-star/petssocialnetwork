@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { Post, User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem } from './types';
+import { Post, User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, PetActivity } from './types';
 import Header from './components/Header';
 import CreatePostForm from './components/CreatePostForm';
 import PostCard from './components/PostCard';
@@ -40,6 +40,10 @@ const initialPets: { [key: string]: Pet } = {
         { id: 'fav-2', name: 'Peanut Butter Treats', category: 'Food' },
         { id: 'fav-3', name: 'Morning Park Runs', category: 'Activity' },
     ],
+    activities: [
+        { id: 'act-1', title: 'First Swim at the Lake', date: '2019-07-20', description: 'He was a bit scared at first but then loved it!', category: 'Adventure', photoUrl: 'https://picsum.photos/seed/buddy-swim/400/300' },
+        { id: 'act-2', title: 'Learned to Shake Hands', date: '2018-10-05', description: 'After many treats, he finally got it!', category: 'Milestone' },
+    ],
   },
   'pet-2': { 
     id: 'pet-2', 
@@ -63,6 +67,7 @@ const initialPets: { [key: string]: Pet } = {
         { id: 'fav-4', name: 'Feather Wand', category: 'Toy' },
         { id: 'fav-5', name: 'Sunbathing', category: 'Activity' },
     ],
+    activities: [],
   },
   'pet-3': { 
     id: 'pet-3', 
@@ -83,6 +88,7 @@ const initialPets: { [key: string]: Pet } = {
     healthLog: [],
     achievements: [],
     favoriteItems: [],
+    activities: [],
   },
   'pet-4': { 
     id: 'pet-4', 
@@ -100,6 +106,7 @@ const initialPets: { [key: string]: Pet } = {
     healthLog: [],
     achievements: [],
     favoriteItems: [],
+    activities: [],
   },
 };
 
@@ -162,7 +169,7 @@ const App: React.FC = () => {
   const [playdates, setPlaydates] = useState<{ [key: string]: Playdate }>(initialPlaydates);
 
   const [authState, setAuthState] = useState<AuthState>('loggedIn');
-  const [currentUser, setCurrentUser] = useState<User | null>(initialUsers['user-2']);
+  const [currentUser, setCurrentUser] = useState<User | null>(initialUsers['user-1']);
   const [viewingProfile, setViewingProfile] = useState<User | null>(null);
   const [viewingPet, setViewingPet] = useState<Pet | null>(null);
 
@@ -491,6 +498,43 @@ const App: React.FC = () => {
     });
   };
 
+  const handleAddPetActivity = (petId: string, newActivity: Omit<PetActivity, 'id'>) => {
+    setUsers(prevUsers => {
+        const newUsers = { ...prevUsers };
+        let ownerId: string | null = null;
+        for (const userId in newUsers) {
+            const user = newUsers[userId];
+            const petIndex = user.pets.findIndex(p => p.id === petId);
+            if (petIndex !== -1) {
+                ownerId = userId;
+                const updatedPet = {
+                    ...user.pets[petIndex],
+                    activities: [
+                        ...(user.pets[petIndex].activities || []),
+                        { ...newActivity, id: `act-${Date.now()}` },
+                    ],
+                };
+                user.pets[petIndex] = updatedPet;
+                if (viewingPet?.id === petId) {
+                    setViewingPet(updatedPet);
+                }
+                break;
+            }
+        }
+        
+        if (ownerId) {
+          if (currentUser?.id === ownerId) {
+            setCurrentUser(newUsers[ownerId]);
+          }
+          if (viewingProfile?.id === ownerId) {
+            setViewingProfile(newUsers[ownerId]);
+          }
+        }
+
+        return newUsers;
+    });
+  };
+
   const handleSendFriendRequest = (toUserId: string) => {
     if (!currentUser) return;
     const fromUserId = currentUser.id;
@@ -651,6 +695,7 @@ const App: React.FC = () => {
           onAddHealthLogEntry={handleAddHealthLogEntry}
           onAddPetAchievement={handleAddPetAchievement}
           onAddFavoriteItem={handleAddFavoriteItem}
+          onAddPetActivity={handleAddPetActivity}
         />
       );
     }
