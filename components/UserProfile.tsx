@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { User, Pet, PrivacySettings, Visibility } from '../types';
 import PrivacySettingsComponent from './PrivacySettings';
 import LockIcon from './icons/LockIcon';
 import UsersIcon from './icons/UsersIcon';
 import UserPlusIcon from './icons/UserPlusIcon';
+import ChatBubbleLeftRightIcon from './icons/ChatBubbleLeftRightIcon';
 
 interface UserProfileProps {
   user: User;
@@ -15,6 +17,8 @@ interface UserProfileProps {
   onSendFriendRequest: (toUserId: string) => void;
   onRespondToFriendRequest: (requestId: string, accepted: boolean) => void;
   onOpenPlaydateModal: (user: User, pet: Pet) => void;
+  onStartConversation: (userId: string) => void;
+  onViewProfile: (user: User) => void;
 }
 
 const UserProfile: React.FC<UserProfileProps> = ({ 
@@ -27,16 +31,19 @@ const UserProfile: React.FC<UserProfileProps> = ({
     onSendFriendRequest,
     onRespondToFriendRequest,
     onOpenPlaydateModal,
+    onStartConversation,
+    onViewProfile,
 }) => {
   const isOwner = currentUser.id === user.id;
   const areFriends = user.friends.includes(currentUser.id);
   
-  const outgoingRequest = currentUser.outgoingFriendRequests
-    .map(reqId => allUsers.flatMap(u => u.incomingFriendRequests).includes(reqId))
-    .some(req => req);
+  const outgoingRequest = currentUser.outgoingFriendRequests.some(reqId => 
+    Object.values(allUsers).some(u => u.id === user.id && u.incomingFriendRequests.includes(reqId))
+  );
     
-  const incomingRequest = currentUser.incomingFriendRequests
-    .find(reqId => user.outgoingFriendRequests.includes(reqId));
+  const incomingRequest = currentUser.incomingFriendRequests.find(reqId => 
+    user.outgoingFriendRequests.includes(reqId)
+  );
 
 
   const canView = (section: keyof PrivacySettings): boolean => {
@@ -54,7 +61,16 @@ const UserProfile: React.FC<UserProfileProps> = ({
   const FriendshipActionButton: React.FC = () => {
     if (isOwner) return null;
     if (areFriends) {
-      return <span className="px-4 py-2 text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-semibold rounded-full inline-flex items-center">Friends</span>;
+      return (
+        <div className="flex items-center space-x-2">
+            <span className="px-3 py-1.5 text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-semibold rounded-full inline-flex items-center">Friends</span>
+            <button 
+                onClick={() => onStartConversation(user.id)}
+                className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-full inline-flex items-center">
+                <ChatBubbleLeftRightIcon /> <span className="ml-2 hidden sm:inline">Message</span>
+            </button>
+        </div>
+      );
     }
     if (outgoingRequest) {
       return <span className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-full">Request Sent</span>;
@@ -80,11 +96,11 @@ const UserProfile: React.FC<UserProfileProps> = ({
       </button>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <div className="flex flex-col sm:flex-row items-start justify-between">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between">
             {canViewBasics ? (
-              <div className="flex items-center space-x-6">
+              <div className="flex flex-col sm:flex-row items-center text-center sm:text-left sm:space-x-6">
                 <img className="h-24 w-24 rounded-full" src={user.avatarUrl} alt={user.name} />
-                <div>
+                <div className="mt-4 sm:mt-0">
                   <h1 className="text-3xl font-bold">{user.name}</h1>
                   <p className="text-md text-gray-500 dark:text-gray-400">@{user.username}</p>
                 </div>
@@ -156,22 +172,25 @@ const UserProfile: React.FC<UserProfileProps> = ({
             )}
         </div>
         <div>
-            <h2 className="text-2xl font-bold mb-4">Friends</h2>
+            <h2 className="text-2xl font-bold mb-4">Friends ({user.friends.length})</h2>
             {canViewFriends ? (
                 user.friends.length > 0 ? (
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
                         <div className="grid grid-cols-3 gap-4">
-                            {user.friends.map(friendId => {
+                            {user.friends.slice(0, 9).map(friendId => {
                                 const friend = allUsers.find(u => u.id === friendId);
                                 if (!friend) return null;
                                 return (
-                                    <div key={friendId} className="flex flex-col items-center text-center">
+                                    <div key={friendId} className="flex flex-col items-center text-center cursor-pointer" onClick={() => onViewProfile(friend)}>
                                         <img className="h-16 w-16 rounded-full" src={friend.avatarUrl} alt={friend.name} />
-                                        <p className="text-sm font-medium mt-2 truncate w-full">{friend.name}</p>
+                                        <p className="text-sm font-medium mt-2 truncate w-full hover:underline">{friend.name}</p>
                                     </div>
                                 );
                             })}
                         </div>
+                        {user.friends.length > 9 && (
+                            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">... and {user.friends.length - 9} more friends</p>
+                        )}
                     </div>
                 ) : (
                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">

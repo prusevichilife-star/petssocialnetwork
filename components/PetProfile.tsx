@@ -1,7 +1,7 @@
 
 
-import React, { useState, useRef } from 'react';
-import { Pet, User, Playdate, PetPrivacySettings, Visibility, HealthLogEntry, PetAchievement, HealthLogEntryType, FavoriteItemCategory, FavoriteItem, PetActivity, PetActivityCategory } from '../types';
+import React, from 'react';
+import { Pet, User, Playdate, PetPrivacySettings, Visibility, HealthLogEntry, PetAchievement, HealthLogEntryType, FavoriteItemCategory, FavoriteItem } from '../types';
 import PawIcon from './icons/PawIcon';
 import CakeIcon from './icons/CakeIcon';
 import TagIcon from './icons/TagIcon';
@@ -18,11 +18,6 @@ import SparklesIcon from './icons/SparklesIcon';
 import CubeTransparentIcon from './icons/CubeTransparentIcon';
 import ShoppingBagIcon from './icons/ShoppingBagIcon';
 import SunIcon from './icons/SunIcon';
-import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
-import FlagIcon from './icons/FlagIcon';
-import PuzzlePieceIcon from './icons/PuzzlePieceIcon';
-import MapIcon from './icons/MapIcon';
-import ScissorsIcon from './icons/ScissorsIcon';
 import UserMinusIcon from './icons/UserMinusIcon';
 
 interface PetProfileProps {
@@ -32,12 +27,12 @@ interface PetProfileProps {
   allPlaydates: Playdate[];
   onReturn: () => void;
   onViewPet: (pet: Pet) => void;
+  onViewProfile?: (user: User) => void;
   onUpdatePetPrivacySettings: (petId: string, section: keyof PetPrivacySettings, visibility: Visibility | 'private' | 'friends') => void;
   onAddPetPhoto: (petId: string, photoUrl: string) => void;
   onAddHealthLogEntry: (petId: string, newEntry: Omit<HealthLogEntry, 'id'>) => void;
   onAddPetAchievement: (petId: string, newAchievement: Omit<PetAchievement, 'id'>) => void;
   onAddFavoriteItem: (petId: string, newItem: Omit<FavoriteItem, 'id'>) => void;
-  onAddPetActivity: (petId: string, newActivity: Omit<PetActivity, 'id'>) => void;
   onRemovePetFriend: (petId: string, friendId: string) => void;
 }
 
@@ -60,29 +55,22 @@ const InfoPill: React.FC<{ icon: React.ReactNode; label: string; value: string }
     </div>
 );
 
-const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, allPlaydates, onReturn, onViewPet, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement, onAddFavoriteItem, onAddPetActivity, onRemovePetFriend }) => {
+const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, allPlaydates, onReturn, onViewPet, onViewProfile, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement, onAddFavoriteItem, onRemovePetFriend }) => {
   const age = calculateAge(pet.birthdate);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  const [showAchievementForm, setShowAchievementForm] = useState(false);
-  const [newAchievementTitle, setNewAchievementTitle] = useState('');
-  const [newAchievementDate, setNewAchievementDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showAchievementForm, setShowAchievementForm] = React.useState(false);
+  const [newAchievementTitle, setNewAchievementTitle] = React.useState('');
+  const [newAchievementDate, setNewAchievementDate] = React.useState(new Date().toISOString().split('T')[0]);
 
-  const [showHealthLogForm, setShowHealthLogForm] = useState(false);
-  const [newHealthLogType, setNewHealthLogType] = useState<HealthLogEntryType>('Vet Visit');
-  const [newHealthLogDate, setNewHealthLogDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newHealthLogNotes, setNewHealthLogNotes] = useState('');
+  const [showHealthLogForm, setShowHealthLogForm] = React.useState(false);
+  const [newHealthLogType, setNewHealthLogType] = React.useState<HealthLogEntryType>('Vet Visit');
+  const [newHealthLogDate, setNewHealthLogDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [newHealthLogNotes, setNewHealthLogNotes] = React.useState('');
   
-  const [showFavoriteForm, setShowFavoriteForm] = useState(false);
-  const [newFavoriteName, setNewFavoriteName] = useState('');
-  const [newFavoriteCategory, setNewFavoriteCategory] = useState<FavoriteItemCategory>('Toy');
-  
-  const [showActivityForm, setShowActivityForm] = useState(false);
-  const [newActivityTitle, setNewActivityTitle] = useState('');
-  const [newActivityDate, setNewActivityDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newActivityDescription, setNewActivityDescription] = useState('');
-  const [newActivityCategory, setNewActivityCategory] = useState<PetActivityCategory>('Milestone');
-  const [newActivityPhotoUrl, setNewActivityPhotoUrl] = useState('');
+  const [showFavoriteForm, setShowFavoriteForm] = React.useState(false);
+  const [newFavoriteName, setNewFavoriteName] = React.useState('');
+  const [newFavoriteCategory, setNewFavoriteCategory] = React.useState<FavoriteItemCategory>('Toy');
 
   const owner = Object.values(allUsers).find(user => user.pets.some(p => p.id === pet.id));
   const isOwner = owner?.id === currentUser.id;
@@ -162,25 +150,6 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
     }
   };
 
-  const handleAddActivitySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newActivityTitle.trim()) {
-      onAddPetActivity(pet.id, {
-        title: newActivityTitle.trim(),
-        date: newActivityDate,
-        category: newActivityCategory,
-        description: newActivityDescription.trim() || undefined,
-        photoUrl: newActivityPhotoUrl.trim() || undefined,
-      });
-      setNewActivityTitle('');
-      setNewActivityDate(new Date().toISOString().split('T')[0]);
-      setNewActivityDescription('');
-      setNewActivityCategory('Milestone');
-      setNewActivityPhotoUrl('');
-      setShowActivityForm(false);
-    }
-  };
-  
   const healthLogIcons: Record<HealthLogEntryType, React.ReactNode> = {
     'Vet Visit': <BuildingOfficeIcon />,
     'Vaccination': <BeakerIcon />,
@@ -191,13 +160,6 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
     'Toy': <CubeTransparentIcon />,
     'Food': <ShoppingBagIcon />,
     'Activity': <SunIcon />,
-  };
-
-  const activityIcons: Record<PetActivityCategory, React.ReactNode> = {
-    'Milestone': <FlagIcon />,
-    'Playtime': <PuzzlePieceIcon />,
-    'Adventure': <MapIcon />,
-    'Grooming': <ScissorsIcon />,
   };
 
   const favoriteItemsByCategory = (pet.favoriteItems || []).reduce((acc, item) => {
@@ -251,6 +213,12 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
           </div>
           <div className="p-8">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">{pet.name}</h1>
+            {owner && onViewProfile && (
+                <p 
+                    className="mt-1 text-md text-gray-500 dark:text-gray-400">
+                    with <span onClick={() => onViewProfile(owner)} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">{owner.name}</span>
+                </p>
+            )}
             <p className="mt-2 text-gray-600 dark:text-gray-400">{pet.breed}</p>
           </div>
         </div>
@@ -264,67 +232,6 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
                     <InfoPill icon={<CakeIcon />} label="Age" value={age} />
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{pet.bio}</p>
-                
-                 <div className="mt-8">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold flex items-center"><ClipboardDocumentListIcon /><span className="ml-2">Activities</span></h2>
-                        {isOwner && (
-                            <button 
-                                onClick={() => setShowActivityForm(!showActivityForm)}
-                                className="px-3 py-1.5 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-semibold rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors"
-                            >
-                                {showActivityForm ? 'Cancel' : 'Add Activity'}
-                            </button>
-                        )}
-                    </div>
-
-                    {isOwner && showActivityForm && (
-                        <form onSubmit={handleAddActivitySubmit} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6 space-y-4">
-                            <input type="text" value={newActivityTitle} onChange={e => setNewActivityTitle(e.target.value)} className="w-full p-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md bg-white dark:bg-gray-900" placeholder="Activity Title" required />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="act-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                                    <input type="date" id="act-date" value={newActivityDate} onChange={e => setNewActivityDate(e.target.value)} className="mt-1 w-full p-2 text-base border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900" max={new Date().toISOString().split('T')[0]} required />
-                                </div>
-                                <div>
-                                    <label htmlFor="act-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                                    <select id="act-category" value={newActivityCategory} onChange={e => setNewActivityCategory(e.target.value as PetActivityCategory)} className="mt-1 w-full p-2 text-base border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900">
-                                        <option>Milestone</option>
-                                        <option>Playtime</option>
-                                        <option>Adventure</option>
-                                        <option>Grooming</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <textarea value={newActivityDescription} onChange={e => setNewActivityDescription(e.target.value)} className="w-full p-2 text-base border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900" placeholder="Description (optional)" rows={3}></textarea>
-                            <input type="text" value={newActivityPhotoUrl} onChange={e => setNewActivityPhotoUrl(e.target.value)} className="w-full p-2 text-base border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900" placeholder="Photo URL (optional)" />
-                            <div className="text-right">
-                                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700">Save Activity</button>
-                            </div>
-                        </form>
-                    )}
-
-                    {(pet.activities && pet.activities.length > 0) ? (
-                        <div className="relative pl-6">
-                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" style={{ transform: 'translateX(1.125rem)' }}></div>
-                            {pet.activities.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(activity => (
-                                <div key={activity.id} className="relative mb-8">
-                                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-                                        {activityIcons[activity.category]}
-                                    </div>
-                                    <div className="ml-12 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                        <p className="absolute -top-3 -left-2 bg-gray-50 dark:bg-gray-700/50 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 rounded-full">{new Date(activity.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                                        <h4 className="font-bold text-gray-900 dark:text-white">{activity.title}</h4>
-                                        {activity.description && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{activity.description}</p>}
-                                        {activity.photoUrl && <img src={activity.photoUrl} alt={activity.title} className="mt-3 rounded-lg max-h-60 w-auto" />}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">No activities logged yet.</p>
-                    )}
-                </div>
 
                 <div className="mt-8">
                     <div className="flex justify-between items-center mb-4">
@@ -447,7 +354,7 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
                 </div>
             </div>
             <div>
-                <h2 className="text-xl font-bold mb-4">Play Pals</h2>
+                <h2 className="text-xl font-bold mb-4">Play Pals ({playPals.length})</h2>
                  {playPals.length > 0 ? (
                     <div className="space-y-3">
                         {playPals.map(pal => (

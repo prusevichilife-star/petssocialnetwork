@@ -1,18 +1,25 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { User, FriendRequest, Playdate } from '../types';
+import { User, FriendRequest, Playdate, Message } from '../types';
 import BellIcon from './icons/BellIcon';
 import NotificationsDropdown from './NotificationsDropdown';
+import CompassIcon from './icons/CompassIcon';
+import ChatBubbleLeftRightIcon from './icons/ChatBubbleLeftRightIcon';
 
 interface HeaderProps {
   user: User;
   allUsers: { [key: string]: User };
+  messages: Message[];
   allFriendRequests: FriendRequest[];
   allPlaydates: Playdate[];
   onLogout: () => void;
   onNavigateToDashboard: () => void;
   onViewProfile: () => void;
+  onReturnToFeed: () => void;
+  onNavigateToDiscover: () => void;
   onRespondToFriendRequest: (requestId: string, accepted: boolean) => void;
   onRespondToPlaydateRequest: (playdateId: string, accepted: boolean) => void;
+  onOpenMessaging: () => void;
 }
 
 const RoleBadge: React.FC<{ role: 'admin' | 'moderator' }> = ({ role }) => {
@@ -27,11 +34,26 @@ const RoleBadge: React.FC<{ role: 'admin' | 'moderator' }> = ({ role }) => {
   );
 };
 
-const Header: React.FC<HeaderProps> = ({ user, allUsers, allFriendRequests, allPlaydates, onLogout, onNavigateToDashboard, onViewProfile, onRespondToFriendRequest, onRespondToPlaydateRequest }) => {
+const Header: React.FC<HeaderProps> = ({ 
+    user, 
+    allUsers,
+    messages, 
+    allFriendRequests, 
+    allPlaydates, 
+    onLogout, 
+    onNavigateToDashboard, 
+    onViewProfile,
+    onReturnToFeed,
+    onNavigateToDiscover,
+    onRespondToFriendRequest, 
+    onRespondToPlaydateRequest,
+    onOpenMessaging
+}) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
   const notificationCount = allFriendRequests.length + allPlaydates.length;
+  const unreadMessagesCount = messages.filter(m => m.toUserId === user.id && !m.read).length;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -47,10 +69,14 @@ const Header: React.FC<HeaderProps> = ({ user, allUsers, allFriendRequests, allP
   }, []);
 
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10">
+    <header className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
+          <div 
+            className="flex items-center cursor-pointer"
+            onClick={onReturnToFeed}
+            title="Back to Feed"
+          >
             <svg
               className="h-8 w-8 text-indigo-500"
               viewBox="0 0 24 24"
@@ -65,6 +91,29 @@ const Header: React.FC<HeaderProps> = ({ user, allUsers, allFriendRequests, allP
             <span className="ml-2 text-xl font-bold text-gray-800 dark:text-white">PetSocial</span>
           </div>
           <div className="flex items-center">
+             <button
+                onClick={onNavigateToDiscover}
+                className="p-2 mr-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                aria-label="Discover new pets and users"
+                title="Discover"
+             >
+                <CompassIcon />
+            </button>
+             <div className="relative mr-2">
+                 <button
+                    onClick={onOpenMessaging}
+                    className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    aria-label="Open messages"
+                    title="Messages"
+                 >
+                    <ChatBubbleLeftRightIcon />
+                    {unreadMessagesCount > 0 && (
+                      <span className="absolute top-0 right-0 block h-5 w-5 text-xs flex items-center justify-center transform -translate-y-1/2 translate-x-1/2 rounded-full bg-indigo-500 text-white ring-2 ring-white dark:ring-gray-800">
+                        {unreadMessagesCount}
+                      </span>
+                    )}
+                </button>
+            </div>
             <div className="relative mr-4" ref={notificationsRef}>
                 <button
                     onClick={() => setShowNotifications(!showNotifications)}

@@ -1,3 +1,4 @@
+
 export type Role = 'user' | 'moderator' | 'admin';
 export type UserStatus = 'active' | 'suspended';
 export type Visibility = 'public' | 'friends' | 'private';
@@ -43,7 +44,7 @@ export type PetActivityCategory = 'Milestone' | 'Playtime' | 'Adventure' | 'Groo
 export interface PetActivity {
   id: string;
   title: string;
-  date: string; // YYYY-MM-DD
+  date: string; // ISO String
   description?: string;
   photoUrl?: string;
   category: PetActivityCategory;
@@ -63,7 +64,6 @@ export interface Pet {
   healthLog?: HealthLogEntry[];
   achievements?: PetAchievement[];
   favoriteItems?: FavoriteItem[];
-  activities?: PetActivity[];
 }
 
 export interface User {
@@ -82,13 +82,26 @@ export interface User {
 
 export interface Post {
   id: string;
+  type: 'post';
   user: User;
   content: string;
-  timestamp: string;
+  date: string; // ISO String
   likeCount: number;
   isLiked: boolean;
   pet?: Pet;
 }
+
+export interface ActivityFeedItem extends Omit<PetActivity, 'id'> {
+  id: string;
+  type: 'activity';
+  user: User;
+  pet: Pet;
+  likeCount: number;
+  isLiked: boolean;
+}
+
+export type FeedItem = Post | ActivityFeedItem;
+
 
 export interface FriendRequest {
     id: string;
@@ -108,4 +121,13 @@ export interface Playdate {
     status: PlaydateStatus;
     date: string; // ISO string for simplicity
     location: string;
+}
+
+export interface Message {
+    id: string;
+    fromUserId: string;
+    toUserId: string;
+    content: string;
+    timestamp: string; // ISO String
+    read: boolean;
 }

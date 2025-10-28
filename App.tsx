@@ -1,154 +1,78 @@
 
 import React, { useState, useCallback } from 'react';
-import { Post, User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, PetActivity } from './types';
+import { User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, FeedItem, Post, ActivityFeedItem, Message } from './types';
 import Header from './components/Header';
-import CreatePostForm from './components/CreatePostForm';
+import CreateFeedItemForm from './components/CreateFeedItemForm';
 import PostCard from './components/PostCard';
+import PetActivityCard from './components/PetActivityCard';
 import Login from './components/Login';
 import Mfa from './components/Mfa';
 import AdminDashboard from './components/AdminDashboard';
 import UserProfile from './components/UserProfile';
 import PetProfile from './components/PetProfile';
 import RequestPlaydateModal from './components/RequestPlaydateModal';
+import DiscoverPage from './components/DiscoverPage';
+import MessagingView from './components/MessagingView';
+import FeedFilter from './components/FeedFilter';
 
 const initialPets: { [key: string]: Pet } = {
-  'pet-1': { 
-    id: 'pet-1', 
-    name: 'Buddy', 
-    type: 'Dog',
-    breed: 'Golden Retriever', 
-    avatarUrl: 'https://picsum.photos/seed/buddy/200/200',
-    birthdate: '2018-05-12',
-    bio: 'Buddy is a fun-loving Golden Retriever who enjoys long walks in the park, playing fetch, and getting belly rubs. He is a certified good boy and loves meeting new friends, both human and canine!',
-    photos: [
-      'https://picsum.photos/seed/buddy-1/400/300',
-      'https://picsum.photos/seed/buddy-2/400/300',
-      'https://picsum.photos/seed/buddy-3/400/300',
-    ],
-    friends: ['pet-2'],
-    privacySettings: { profile: 'public', playdates: 'friends' },
-    healthLog: [
-        { id: 'hl-1', type: 'Vaccination', date: '2022-06-01', notes: 'Annual booster shots.' },
-        { id: 'hl-2', type: 'Vet Visit', date: '2023-01-10', notes: 'Checkup, all clear.' },
-    ],
-    achievements: [
-        { id: 'ach-1', title: 'Certified Good Boy', date: '2019-01-15', icon: 'trophy' },
-        { id: 'ach-2', title: 'Completed Puppy Training', date: '2018-09-01', icon: 'trophy' },
-    ],
-    favoriteItems: [
-        { id: 'fav-1', name: 'Squeaky Tennis Ball', category: 'Toy' },
-        { id: 'fav-2', name: 'Peanut Butter Treats', category: 'Food' },
-        { id: 'fav-3', name: 'Morning Park Runs', category: 'Activity' },
-    ],
-    activities: [
-        { id: 'act-1', title: 'First Swim at the Lake', date: '2019-07-20', description: 'He was a bit scared at first but then loved it!', category: 'Adventure', photoUrl: 'https://picsum.photos/seed/buddy-swim/400/300' },
-        { id: 'act-2', title: 'Learned to Shake Hands', date: '2018-10-05', description: 'After many treats, he finally got it!', category: 'Milestone' },
-    ],
-  },
-  'pet-2': { 
-    id: 'pet-2', 
-    name: 'Lucy', 
-    type: 'Cat',
-    breed: 'Siamese', 
-    avatarUrl: 'https://picsum.photos/seed/lucy/200/200',
-    birthdate: '2020-09-20',
-    bio: 'Lucy is a curious and vocal Siamese cat. She loves to explore high places, chase laser pointers, and take long naps in sunbeams. Her striking blue eyes can melt any heart.',
-    photos: [
-        'https://picsum.photos/seed/lucy-1/400/300',
-        'https://picsum.photos/seed/lucy-2/400/300',
-    ],
-    friends: ['pet-1'],
-    privacySettings: { profile: 'friends', playdates: 'friends' },
-    healthLog: [],
-    achievements: [
-        { id: 'ach-3', title: 'Mastered the Art of Napping', date: '2021-03-20', icon: 'trophy' },
-    ],
-    favoriteItems: [
-        { id: 'fav-4', name: 'Feather Wand', category: 'Toy' },
-        { id: 'fav-5', name: 'Sunbathing', category: 'Activity' },
-    ],
-    activities: [],
-  },
-  'pet-3': { 
-    id: 'pet-3', 
-    name: 'Max', 
-    type: 'Dog',
-    breed: 'German Shepherd', 
-    avatarUrl: 'https://picsum.photos/seed/max/200/200',
-    birthdate: '2017-02-01',
-    bio: 'Max is a loyal and intelligent German Shepherd. He is highly protective of his family and loves learning new tricks. His favorite activity is going for a run with his owner, Bob.',
-    photos: [
-        'https://picsum.photos/seed/max-1/400/300',
-        'https://picsum.photos/seed/max-2/400/300',
-        'https://picsum.photos/seed/max-3/400/300',
-        'https://picsum.photos/seed/max-4/400/300',
-    ],
-    friends: [],
-    privacySettings: { profile: 'friends', playdates: 'private' },
-    healthLog: [],
-    achievements: [],
-    favoriteItems: [],
-    activities: [],
-  },
-  'pet-4': { 
-    id: 'pet-4', 
-    name: 'Chloe', 
-    type: 'Cat',
-    breed: 'Persian', 
-    avatarUrl: 'https://picsum.photos/seed/chloe/200/200',
-    birthdate: '2021-11-30',
-    bio: 'Chloe is a calm and majestic Persian cat with a luxurious coat. She enjoys being pampered, gentle brushing, and quiet evenings. She is the queen of the household and she knows it.',
-    photos: [
-        'https://picsum.photos/seed/chloe-1/400/300',
-    ],
-    friends: [],
-    privacySettings: { profile: 'private', playdates: 'private' },
-    healthLog: [],
-    achievements: [],
-    favoriteItems: [],
-    activities: [],
-  },
+  'pet-1': { id: 'pet-1', name: 'Buddy', type: 'Dog', breed: 'Golden Retriever', avatarUrl: 'https://picsum.photos/seed/buddy/200/200', birthdate: '2018-05-12', bio: 'Loves fetch and long walks.', photos: ['https://picsum.photos/seed/buddy-1/400/300'], friends: ['pet-2', 'pet-5'], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-2': { id: 'pet-2', name: 'Lucy', type: 'Cat', breed: 'Siamese', avatarUrl: 'https://picsum.photos/seed/lucy/200/200', birthdate: '2020-09-20', bio: 'A very vocal and curious cat.', photos: ['https://picsum.photos/seed/lucy-1/400/300'], friends: ['pet-1'], privacySettings: { profile: 'friends', playdates: 'friends' } },
+  'pet-3': { id: 'pet-3', name: 'Max', type: 'Dog', breed: 'German Shepherd', avatarUrl: 'https://picsum.photos/seed/max/200/200', birthdate: '2017-02-01', bio: 'Loyal and protective.', photos: ['https://picsum.photos/seed/max-1/400/300'], friends: [], privacySettings: { profile: 'friends', playdates: 'private' } },
+  'pet-4': { id: 'pet-4', name: 'Chloe', type: 'Cat', breed: 'Persian', avatarUrl: 'https://picsum.photos/seed/chloe/200/200', birthdate: '2021-11-30', bio: 'Loves being pampered.', photos: ['https://picsum.photos/seed/chloe-1/400/300'], friends: ['pet-7'], privacySettings: { profile: 'private', playdates: 'private' } },
+  'pet-5': { id: 'pet-5', name: 'Rocky', type: 'Dog', breed: 'Boxer', avatarUrl: 'https://picsum.photos/seed/rocky/200/200', birthdate: '2019-03-22', bio: 'Energetic and playful.', photos: ['https://picsum.photos/seed/rocky-1/400/300'], friends: ['pet-1'], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-6': { id: 'pet-6', name: 'Milo', type: 'Cat', breed: 'Tabby', avatarUrl: 'https://picsum.photos/seed/milo/200/200', birthdate: '2022-01-15', bio: 'A friendly tabby who loves cuddles.', photos: ['https://picsum.photos/seed/milo-1/400/300'], friends: [], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-7': { id: 'pet-7', name: 'Daisy', type: 'Dog', breed: 'Beagle', avatarUrl: 'https://picsum.photos/seed/daisy/200/200', birthdate: '2020-06-10', bio: 'Follows her nose everywhere.', photos: ['https://picsum.photos/seed/daisy-1/400/300'], friends: ['pet-4', 'pet-8'], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-8': { id: 'pet-8', name: 'Simba', type: 'Cat', breed: 'Maine Coon', avatarUrl: 'https://picsum.photos/seed/simba/200/200', birthdate: '2018-11-05', bio: 'A gentle giant.', photos: ['https://picsum.photos/seed/simba-1/400/300'], friends: ['pet-7'], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-9': { id: 'pet-9', name: 'Sadie', type: 'Dog', breed: 'Poodle', avatarUrl: 'https://picsum.photos/seed/sadie/200/200', birthdate: '2021-08-25', bio: 'Loves showing off her new haircuts.', photos: ['https://picsum.photos/seed/sadie-1/400/300'], friends: [], privacySettings: { profile: 'friends', playdates: 'friends' } },
+  'pet-10': { id: 'pet-10', name: 'Oreo', type: 'Cat', breed: 'Domestic Shorthair', avatarUrl: 'https://picsum.photos/seed/oreo/200/200', birthdate: '2019-05-01', bio: 'Classic black and white cat attitude.', photos: ['https://picsum.photos/seed/oreo-1/400/300'], friends: [], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-11': { id: 'pet-11', name: 'Zeus', type: 'Dog', breed: 'Great Dane', avatarUrl: 'https://picsum.photos/seed/zeus/200/200', birthdate: '2020-02-14', bio: 'Thinks he is a lap dog.', photos: ['https://picsum.photos/seed/zeus-1/400/300'], friends: [], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-12': { id: 'pet-12', name: 'Nala', type: 'Cat', breed: 'Bengal', avatarUrl: 'https://picsum.photos/seed/nala/200/200', birthdate: '2022-03-10', bio: 'Loves to climb and explore.', photos: ['https://picsum.photos/seed/nala-1/400/300'], friends: [], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-13': { id: 'pet-13', name: 'Lola', type: 'Dog', breed: 'Chihuahua', avatarUrl: 'https://picsum.photos/seed/lola/200/200', birthdate: '2017-10-01', bio: 'Small but mighty.', photos: ['https://picsum.photos/seed/lola-1/400/300'], friends: [], privacySettings: { profile: 'friends', playdates: 'private' } },
+  'pet-14': { id: 'pet-14', name: 'Misty', type: 'Cat', breed: 'Russian Blue', avatarUrl: 'https://picsum.photos/seed/misty/200/200', birthdate: '2021-04-05', bio: 'Shy and sweet.', photos: ['https://picsum.photos/seed/misty-1/400/300'], friends: [], privacySettings: { profile: 'public', playdates: 'friends' } },
+  'pet-15': { id: 'pet-15', name: 'Cooper', type: 'Dog', breed: 'Australian Shepherd', avatarUrl: 'https://picsum.photos/seed/cooper/200/200', birthdate: '2019-09-12', bio: 'Loves to herd anything that moves.', photos: ['https://picsum.photos/seed/cooper-1/400/300'], friends: [], privacySettings: { profile: 'public', playdates: 'friends' } },
 };
 
 const initialUsersData: { [key: string]: Omit<User, 'id'> } = {
-  'user-1': { name: 'Alice Johnson', username: 'alicej', avatarUrl: 'https://picsum.photos/seed/alice/100/100', pets: [initialPets['pet-1']], role: 'admin', status: 'active', friends: ['user-2'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-1': { name: 'Alice Johnson', username: 'alicej', avatarUrl: 'https://picsum.photos/seed/alice/100/100', pets: [initialPets['pet-1']], role: 'admin', status: 'active', friends: ['user-2', 'user-4'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
   'user-2': { name: 'Bob Williams', username: 'bobw', avatarUrl: 'https://picsum.photos/seed/bob/100/100', pets: [initialPets['pet-2'], initialPets['pet-3']], role: 'moderator', status: 'active', friends: ['user-1'], privacySettings: { profileBasics: 'public', pets: 'friends', activity: 'public', friends: 'friends' }, incomingFriendRequests: ['req-1'], outgoingFriendRequests: [] },
-  'user-3': { name: 'Charlie Brown', username: 'charlieb', avatarUrl: 'https://picsum.photos/seed/charlie/100/100', pets: [initialPets['pet-4']], role: 'user', status: 'active', friends: [], privacySettings: { profileBasics: 'friends', pets: 'friends', activity: 'private', friends: 'private' }, incomingFriendRequests: [], outgoingFriendRequests: ['req-1'] },
+  'user-3': { name: 'Charlie Brown', username: 'charlieb', avatarUrl: 'https://picsum.photos/seed/charlie/100/100', pets: [initialPets['pet-4']], role: 'user', status: 'active', friends: ['user-5'], privacySettings: { profileBasics: 'friends', pets: 'friends', activity: 'private', friends: 'private' }, incomingFriendRequests: [], outgoingFriendRequests: ['req-1'] },
+  'user-4': { name: 'Diana Prince', username: 'dianap', avatarUrl: 'https://picsum.photos/seed/diana/100/100', pets: [initialPets['pet-5'], initialPets['pet-6']], role: 'user', status: 'active', friends: ['user-1', 'user-6'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-5': { name: 'Ethan Hunt', username: 'ethanh', avatarUrl: 'https://picsum.photos/seed/ethan/100/100', pets: [initialPets['pet-7']], role: 'user', status: 'active', friends: ['user-3', 'user-7'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-6': { name: 'Fiona Glenanne', username: 'fionag', avatarUrl: 'https://picsum.photos/seed/fiona/100/100', pets: [initialPets['pet-8']], role: 'user', status: 'active', friends: ['user-4', 'user-8'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'friends', friends: 'friends' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-7': { name: 'George Costanza', username: 'georgec', avatarUrl: 'https://picsum.photos/seed/george/100/100', pets: [initialPets['pet-9'], initialPets['pet-10']], role: 'user', status: 'active', friends: ['user-5', 'user-9'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-8': { name: 'Hannah Montana', username: 'hannahm', avatarUrl: 'https://picsum.photos/seed/hannah/100/100', pets: [], role: 'user', status: 'suspended', friends: ['user-6'], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-9': { name: 'Indiana Jones', username: 'indianaj', avatarUrl: 'https://picsum.photos/seed/indiana/100/100', pets: [initialPets['pet-11']], role: 'user', status: 'active', friends: ['user-7'], privacySettings: { profileBasics: 'public', pets: 'friends', activity: 'friends', friends: 'friends' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-10': { name: 'Jack Sparrow', username: 'jack_sparrow', avatarUrl: 'https://picsum.photos/seed/jack/100/100', pets: [], role: 'user', status: 'active', friends: [], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-11': { name: 'Kim Possible', username: 'kimp', avatarUrl: 'https://picsum.photos/seed/kim/100/100', pets: [initialPets['pet-12']], role: 'user', status: 'active', friends: [], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-12': { name: 'Liz Lemon', username: 'lizl', avatarUrl: 'https://picsum.photos/seed/liz/100/100', pets: [initialPets['pet-13'], initialPets['pet-14']], role: 'user', status: 'active', friends: [], privacySettings: { profileBasics: 'friends', pets: 'friends', activity: 'friends', friends: 'friends' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-13': { name: 'Michael Scott', username: 'michaels', avatarUrl: 'https://picsum.photos/seed/michael/100/100', pets: [initialPets['pet-15']], role: 'user', status: 'active', friends: [], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-14': { name: 'Ned Flanders', username: 'nedf', avatarUrl: 'https://picsum.photos/seed/ned/100/100', pets: [], role: 'user', status: 'active', friends: [], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
+  'user-15': { name: 'Olivia Benson', username: 'oliviab', avatarUrl: 'https://picsum.photos/seed/olivia/100/100', pets: [], role: 'moderator', status: 'active', friends: [], privacySettings: { profileBasics: 'public', pets: 'public', activity: 'public', friends: 'public' }, incomingFriendRequests: [], outgoingFriendRequests: [] },
 };
 
 const initialUsers: { [key: string]: User } = Object.fromEntries(
   Object.entries(initialUsersData).map(([id, userData]) => [id, { id, ...userData }])
 );
 
+const initialPostsData: (Omit<Post, 'id' | 'user' | 'pet'> & { userId: string, petId?: string })[] = [
+  { type: 'post', userId: 'user-1', petId: 'pet-1', content: 'Buddy enjoying the sunshine at the park today! ☀️🐶', date: new Date(Date.now() - 24 * 3600 * 1000).toISOString(), likeCount: 77, isLiked: false },
+  { type: 'post', userId: 'user-2', petId: 'pet-2', content: 'Lucy loves her new scratching post! 😻', date: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), likeCount: 42, isLiked: false },
+  { type: 'post', userId: 'user-3', petId: 'pet-4', content: 'Chloe is being majestic as usual.', date: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), likeCount: 128, isLiked: true },
+  { type: 'post', userId: 'user-4', petId: 'pet-5', content: 'Rocky has so much energy today!', date: new Date(Date.now() - 8 * 3600 * 1000).toISOString(), likeCount: 55, isLiked: false },
+  { type: 'post', userId: 'user-5', petId: 'pet-7', content: 'Daisy found a new smell she is very interested in.', date: new Date(Date.now() - 12 * 3600 * 1000).toISOString(), likeCount: 30, isLiked: false },
+  { type: 'post', userId: 'user-6', petId: 'pet-8', content: 'Simba is just a big fluffy pillow.', date: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), likeCount: 90, isLiked: true },
+  { type: 'post', userId: 'user-7', petId: 'pet-9', content: 'Sadie got a fresh trim! Looking fabulous.', date: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(), likeCount: 112, isLiked: false },
+  { type: 'post', userId: 'user-9', petId: 'pet-11', content: 'Zeus tried to sit on my lap. Send help.', date: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(), likeCount: 250, isLiked: true },
+  { type: 'post', userId: 'user-13', petId: 'pet-15', content: 'Cooper is trying to herd the Roomba.', date: new Date(Date.now() - 1 * 3600 * 1000).toISOString(), likeCount: 180, isLiked: false },
+];
 
-const initialPosts: Post[] = [
-  {
-    id: 'post-1',
-    user: initialUsers['user-2'],
-    pet: initialPets['pet-2'],
-    content: 'Lucy loves her new scratching post! 😻',
-    timestamp: '2 hours ago',
-    likeCount: 42,
-    isLiked: false,
-  },
-  {
-    id: 'post-2',
-    user: initialUsers['user-3'],
-    pet: initialPets['pet-4'],
-    content: 'Chloe is being majestic as usual.',
-    timestamp: '5 hours ago',
-    likeCount: 128,
-    isLiked: true,
-  },
-  {
-    id: 'post-3',
-    user: initialUsers['user-1'],
-    pet: initialPets['pet-1'],
-    content: 'Buddy enjoying the sunshine at the park today! ☀️🐶',
-    timestamp: '1 day ago',
-    likeCount: 77,
-    isLiked: false,
-  },
+const initialActivitiesData: (Omit<ActivityFeedItem, 'id' | 'user' | 'pet'> & { userId: string, petId: string })[] = [
+    { type: 'activity', userId: 'user-1', petId: 'pet-1', title: 'First Swim at the Lake', date: '2024-07-20T10:00:00.000Z', description: 'He was a bit scared at first but then loved it!', category: 'Adventure', photoUrl: 'https://picsum.photos/seed/buddy-swim/400/300', likeCount: 55, isLiked: true },
+    { type: 'activity', userId: 'user-1', petId: 'pet-1', title: 'Learned to Shake Hands', date: '2024-06-05T15:30:00.000Z', description: 'After many treats, he finally got it!', category: 'Milestone', likeCount: 89, isLiked: false },
+    { type: 'activity', userId: 'user-4', petId: 'pet-6', title: 'Conquered the Bookshelf', date: '2024-07-19T12:00:00.000Z', description: 'Milo reached the top shelf for the first time!', category: 'Milestone', photoUrl: 'https://picsum.photos/seed/milo-climb/400/300', likeCount: 63, isLiked: false },
+    { type: 'activity', userId: 'user-7', petId: 'pet-10', title: 'Puzzle Toy Time', date: '2024-07-18T18:00:00.000Z', description: 'Oreo solved his new puzzle toy in record time.', category: 'Playtime', likeCount: 45, isLiked: true },
+    { type: 'activity', userId: 'user-11', petId: 'pet-12', title: 'First Vet Visit', date: '2024-05-15T09:30:00.000Z', description: 'Nala was so brave!', category: 'Milestone', photoUrl: 'https://picsum.photos/seed/nala-vet/400/300', likeCount: 78, isLiked: false },
 ];
 
 const initialFriendRequests: { [key: string]: FriendRequest } = {
@@ -159,22 +83,56 @@ const initialPlaydates: { [key: string]: Playdate } = {
     'pd-1': { id: 'pd-1', fromPetId: 'pet-1', fromUserId: 'user-1', toPetId: 'pet-4', toUserId: 'user-3', status: 'pending', date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), location: 'Virtual Park' }
 };
 
+const initialMessages: Message[] = [
+    { id: 'msg-1', fromUserId: 'user-2', toUserId: 'user-1', content: 'Hey Alice! How is Buddy doing?', timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), read: false },
+    { id: 'msg-2', fromUserId: 'user-1', toUserId: 'user-2', content: "He's great! We went to the park today.", timestamp: new Date(Date.now() - 1 * 3600 * 1000).toISOString(), read: true },
+    { id: 'msg-3', fromUserId: 'user-4', toUserId: 'user-1', content: 'Wanna schedule a playdate for Rocky and Buddy?', timestamp: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), read: false },
+];
+
+const allPosts: Post[] = initialPostsData.map((p, i) => ({
+    ...p,
+    id: `post-${i+1}`,
+    user: initialUsers[p.userId],
+    pet: p.petId ? initialPets[p.petId] : undefined,
+}));
+
+const allActivities: ActivityFeedItem[] = initialActivitiesData.map((a, i) => ({
+    ...a,
+    id: `act-${i+1}`,
+    user: initialUsers[a.userId],
+    pet: initialPets[a.petId],
+}));
+
+const combinedFeed: FeedItem[] = [...allPosts, ...allActivities];
+combinedFeed.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+
 type AuthState = 'loggedOut' | 'needsMfa' | 'loggedIn' | 'adminDashboard';
+type CurrentView = 'feed' | 'discover';
 type LoginResult = 'success' | 'notFound' | 'suspended';
+export type FilterType = 'all' | 'posts' | 'activities' | 'friends';
+
 
 const App: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [feedItems, setFeedItems] = useState<FeedItem[]>(combinedFeed);
   const [users, setUsers] = useState<{ [key: string]: User }>(initialUsers);
   const [friendRequests, setFriendRequests] = useState<{ [key: string]: FriendRequest }>(initialFriendRequests);
   const [playdates, setPlaydates] = useState<{ [key: string]: Playdate }>(initialPlaydates);
-
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  
   const [authState, setAuthState] = useState<AuthState>('loggedIn');
   const [currentUser, setCurrentUser] = useState<User | null>(initialUsers['user-1']);
   const [viewingProfile, setViewingProfile] = useState<User | null>(null);
   const [viewingPet, setViewingPet] = useState<Pet | null>(null);
+  const [currentView, setCurrentView] = useState<CurrentView>('feed');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+
 
   const [isPlaydateModalOpen, setIsPlaydateModalOpen] = useState(false);
   const [playdateTarget, setPlaydateTarget] = useState<{user: User, pet: Pet} | null>(null);
+
+  const [isMessagingOpen, setIsMessagingOpen] = useState(false);
+  const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(null);
 
   const handleLogin = (username: string): LoginResult => {
     const user = Object.values(users).find(u => u.username === username);
@@ -203,88 +161,120 @@ const App: React.FC = () => {
     setCurrentUser(null);
     setViewingProfile(null);
     setViewingPet(null);
+    setCurrentView('feed');
     setAuthState('loggedOut');
   };
 
-  const handleCreatePost = useCallback((content: string) => {
+  const handleCreatePost = useCallback((content: string, petId?: string) => {
     if (!content.trim() || !currentUser) return;
 
     const newPost: Post = {
       id: `post-${Date.now()}`,
+      type: 'post',
       user: currentUser,
       content,
-      timestamp: 'Just now',
+      date: new Date().toISOString(),
       likeCount: 0,
       isLiked: false,
-      pet: currentUser.pets.length > 0 ? currentUser.pets[0] : undefined,
+      pet: petId ? currentUser.pets.find(p => p.id === petId) : (currentUser.pets.length === 1 ? currentUser.pets[0] : undefined),
     };
 
-    setPosts(prevPosts => [newPost, ...prevPosts]);
+    setFeedItems(prevFeed => [newPost, ...prevFeed]);
+  }, [currentUser]);
+  
+  const handleCreateActivity = useCallback((activityData: Omit<ActivityFeedItem, 'id'|'type'|'user'|'pet'|'likeCount'|'isLiked'>, petId: string) => {
+    if (!currentUser) return;
+    const pet = currentUser.pets.find(p => p.id === petId);
+    if (!pet) return;
+
+    const newActivity: ActivityFeedItem = {
+        ...activityData,
+        id: `act-${Date.now()}`,
+        type: 'activity',
+        user: currentUser,
+        pet: pet,
+        likeCount: 0,
+        isLiked: false,
+    };
+    
+    setFeedItems(prevFeed => [newActivity, ...prevFeed].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   }, [currentUser]);
 
-  const handleLikePost = useCallback((postId: string) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post => {
-        if (post.id === postId) {
+  const handleLikeFeedItem = useCallback((itemId: string) => {
+    setFeedItems(prevFeed =>
+      prevFeed.map(item => {
+        if (item.id === itemId) {
           return {
-            ...post,
-            isLiked: !post.isLiked,
-            likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
+            ...item,
+            isLiked: !item.isLiked,
+            likeCount: item.isLiked ? item.likeCount - 1 : item.likeCount + 1,
           };
         }
-        return post;
+        return item;
       })
     );
   }, []);
   
   const handleViewProfile = (user: User) => {
     setViewingPet(null);
+    setCurrentView('feed');
     setViewingProfile(user);
   };
   
   const handleReturnToFeed = () => {
     setViewingPet(null);
     setViewingProfile(null);
+    setCurrentView('feed');
   };
 
   const handleViewPet = (pet: Pet) => {
+    setViewingProfile(null);
+    setCurrentView('feed');
     setViewingPet(pet);
   };
 
   const handleNavigateToDashboard = () => {
     setViewingProfile(null);
     setViewingPet(null);
+    setCurrentView('feed');
     setAuthState('adminDashboard');
   };
   
   const handleReturnToFeedFromDashboard = () => {
     setViewingProfile(null);
     setViewingPet(null);
+    setCurrentView('feed');
     setAuthState('loggedIn');
+  };
+  
+  const handleNavigateToDiscover = () => {
+    setViewingProfile(null);
+    setViewingPet(null);
+    setCurrentView('discover');
   };
 
   const handleUpdateUserRole = (userId: string, role: Role) => {
-    const updatedUsers = {
-      ...users,
-      [userId]: { ...users[userId], role }
-    };
-    setUsers(updatedUsers);
+    setUsers(prevUsers => {
+        const updatedUsers = { ...prevUsers, [userId]: { ...prevUsers[userId], role } };
+        
+        setFeedItems(prevFeed => prevFeed.map(item => 
+          item.user.id === userId ? { ...item, user: updatedUsers[userId] } : item
+        ));
 
-    setPosts(prevPosts => prevPosts.map(post => 
-      post.user.id === userId ? { ...post, user: updatedUsers[userId] } : post
-    ));
+        return updatedUsers;
+    });
   };
 
   const handleUpdateUserStatus = (userId: string, status: UserStatus) => {
-    const updatedUsers = {
-      ...users,
-      [userId]: { ...users[userId], status }
-    };
-    setUsers(updatedUsers);
-    
-    setPosts(prevPosts => prevPosts.map(post => 
-      post.user.id === userId ? { ...post, user: updatedUsers[userId] } : post
-    ));
+    setUsers(prevUsers => {
+        const updatedUsers = { ...prevUsers, [userId]: { ...prevUsers[userId], status } };
+        
+        setFeedItems(prevFeed => prevFeed.map(item => 
+          item.user.id === userId ? { ...item, user: updatedUsers[userId] } : item
+        ));
+        
+        return updatedUsers;
+    });
   };
   
   const handleUpdatePrivacySettings = (userId: string, section: keyof PrivacySettings, visibility: Visibility) => {
@@ -300,15 +290,11 @@ const App: React.FC = () => {
       const updatedUsers = { ...users, [userId]: updatedUser };
       setUsers(updatedUsers);
       
-      if(viewingProfile?.id === userId) {
-        setViewingProfile(updatedUser);
-      }
-      if(currentUser?.id === userId) {
-        setCurrentUser(updatedUser);
-      }
+      if(viewingProfile?.id === userId) setViewingProfile(updatedUser);
+      if(currentUser?.id === userId) setCurrentUser(updatedUser);
       
-      setPosts(prevPosts => prevPosts.map(post => 
-        post.user.id === userId ? { ...post, user: updatedUser } : post
+      setFeedItems(prevFeed => prevFeed.map(item => 
+        item.user.id === userId ? { ...item, user: updatedUser } : item
       ));
     }
   };
@@ -318,7 +304,6 @@ const App: React.FC = () => {
         const newUsers = { ...prevUsers };
         let ownerId: string | null = null;
         
-        // Find owner and update pet
         for (const userId in newUsers) {
             const user = newUsers[userId];
             const petIndex = user.pets.findIndex(p => p.id === petId);
@@ -332,20 +317,14 @@ const App: React.FC = () => {
                     },
                 };
                 user.pets[petIndex] = updatedPet;
-                if (viewingPet?.id === petId) {
-                    setViewingPet(updatedPet);
-                }
+                if (viewingPet?.id === petId) setViewingPet(updatedPet);
                 break;
             }
         }
 
         if (ownerId) {
-          if (currentUser?.id === ownerId) {
-            setCurrentUser(newUsers[ownerId]);
-          }
-          if (viewingProfile?.id === ownerId) {
-            setViewingProfile(newUsers[ownerId]);
-          }
+          if (currentUser?.id === ownerId) setCurrentUser(newUsers[ownerId]);
+          if (viewingProfile?.id === ownerId) setViewingProfile(newUsers[ownerId]);
         }
 
         return newUsers;
@@ -367,20 +346,14 @@ const App: React.FC = () => {
                     photos: [...user.pets[petIndex].photos, photoUrl],
                 };
                 user.pets[petIndex] = updatedPet;
-                if (viewingPet?.id === petId) {
-                    setViewingPet(updatedPet);
-                }
+                if (viewingPet?.id === petId) setViewingPet(updatedPet);
                 break;
             }
         }
         
         if (ownerId) {
-          if (currentUser?.id === ownerId) {
-            setCurrentUser(newUsers[ownerId]);
-          }
-          if (viewingProfile?.id === ownerId) {
-            setViewingProfile(newUsers[ownerId]);
-          }
+          if (currentUser?.id === ownerId) setCurrentUser(newUsers[ownerId]);
+          if (viewingProfile?.id === ownerId) setViewingProfile(newUsers[ownerId]);
         }
 
         return newUsers;
@@ -404,20 +377,14 @@ const App: React.FC = () => {
                     ],
                 };
                 user.pets[petIndex] = updatedPet;
-                if (viewingPet?.id === petId) {
-                    setViewingPet(updatedPet);
-                }
+                if (viewingPet?.id === petId) setViewingPet(updatedPet);
                 break;
             }
         }
         
         if (ownerId) {
-          if (currentUser?.id === ownerId) {
-            setCurrentUser(newUsers[ownerId]);
-          }
-          if (viewingProfile?.id === ownerId) {
-            setViewingProfile(newUsers[ownerId]);
-          }
+          if (currentUser?.id === ownerId) setCurrentUser(newUsers[ownerId]);
+          if (viewingProfile?.id === ownerId) setViewingProfile(newUsers[ownerId]);
         }
 
         return newUsers;
@@ -441,20 +408,14 @@ const App: React.FC = () => {
             ],
           };
           user.pets[petIndex] = updatedPet;
-          if (viewingPet?.id === petId) {
-            setViewingPet(updatedPet);
-          }
+          if (viewingPet?.id === petId) setViewingPet(updatedPet);
           break;
         }
       }
 
       if (ownerId) {
-        if (currentUser?.id === ownerId) {
-          setCurrentUser(newUsers[ownerId]);
-        }
-        if (viewingProfile?.id === ownerId) {
-          setViewingProfile(newUsers[ownerId]);
-        }
+        if (currentUser?.id === ownerId) setCurrentUser(newUsers[ownerId]);
+        if (viewingProfile?.id === ownerId) setViewingProfile(newUsers[ownerId]);
       }
 
       return newUsers;
@@ -478,57 +439,14 @@ const App: React.FC = () => {
                     ],
                 };
                 user.pets[petIndex] = updatedPet;
-                if (viewingPet?.id === petId) {
-                    setViewingPet(updatedPet);
-                }
+                if (viewingPet?.id === petId) setViewingPet(updatedPet);
                 break;
             }
         }
         
         if (ownerId) {
-          if (currentUser?.id === ownerId) {
-            setCurrentUser(newUsers[ownerId]);
-          }
-          if (viewingProfile?.id === ownerId) {
-            setViewingProfile(newUsers[ownerId]);
-          }
-        }
-
-        return newUsers;
-    });
-  };
-
-  const handleAddPetActivity = (petId: string, newActivity: Omit<PetActivity, 'id'>) => {
-    setUsers(prevUsers => {
-        const newUsers = { ...prevUsers };
-        let ownerId: string | null = null;
-        for (const userId in newUsers) {
-            const user = newUsers[userId];
-            const petIndex = user.pets.findIndex(p => p.id === petId);
-            if (petIndex !== -1) {
-                ownerId = userId;
-                const updatedPet = {
-                    ...user.pets[petIndex],
-                    activities: [
-                        ...(user.pets[petIndex].activities || []),
-                        { ...newActivity, id: `act-${Date.now()}` },
-                    ],
-                };
-                user.pets[petIndex] = updatedPet;
-                if (viewingPet?.id === petId) {
-                    setViewingPet(updatedPet);
-                }
-                break;
-            }
-        }
-        
-        if (ownerId) {
-          if (currentUser?.id === ownerId) {
-            setCurrentUser(newUsers[ownerId]);
-          }
-          if (viewingProfile?.id === ownerId) {
-            setViewingProfile(newUsers[ownerId]);
-          }
+          if (currentUser?.id === ownerId) setCurrentUser(newUsers[ownerId]);
+          if (viewingProfile?.id === ownerId) setViewingProfile(newUsers[ownerId]);
         }
 
         return newUsers;
@@ -553,7 +471,6 @@ const App: React.FC = () => {
     if (viewingProfile?.id === fromUserId) setViewingProfile(updatedUsers[fromUserId]);
     if (currentUser?.id === fromUserId) setCurrentUser(updatedUsers[fromUserId]);
     if (viewingProfile?.id === toUserId) setViewingProfile(updatedUsers[toUserId]);
-    if (currentUser?.id === toUserId) setCurrentUser(updatedUsers[toUserId]);
   };
 
   const handleRespondToFriendRequest = (requestId: string, accepted: boolean) => {
@@ -567,8 +484,8 @@ const App: React.FC = () => {
     updatedUsers[toUserId] = { ...updatedUsers[toUserId], incomingFriendRequests: updatedUsers[toUserId].incomingFriendRequests.filter(id => id !== requestId) };
     
     if (accepted) {
-        updatedUsers[fromUserId].friends = [...updatedUsers[fromUserId].friends, toUserId];
-        updatedUsers[toUserId].friends = [...updatedUsers[toUserId].friends, fromUserId];
+        updatedUsers[fromUserId].friends = [...new Set([...updatedUsers[fromUserId].friends, toUserId])];
+        updatedUsers[toUserId].friends = [...new Set([...updatedUsers[toUserId].friends, fromUserId])];
     }
 
     setUsers(updatedUsers);
@@ -611,7 +528,6 @@ const App: React.FC = () => {
       
       const updatedPlaydates = {
         ...playdates,
-        // Fix: Use 'as const' to assert literal types for 'status', preventing type widening to 'string'.
         [playdateId]: { ...playdate, status: accepted ? 'accepted' as const : 'declined' as const }
       };
       setPlaydates(updatedPlaydates);
@@ -622,8 +538,8 @@ const App: React.FC = () => {
             const fromUser = {...newUsers[playdate.fromUserId]};
             const toUser = {...newUsers[playdate.toUserId]};
 
-            fromUser.pets = fromUser.pets.map(p => p.id === playdate.fromPetId ? {...p, friends: [...p.friends, playdate.toPetId] } : p);
-            toUser.pets = toUser.pets.map(p => p.id === playdate.toPetId ? {...p, friends: [...p.friends, playdate.fromPetId] } : p);
+            fromUser.pets = fromUser.pets.map(p => p.id === playdate.fromPetId ? {...p, friends: [...new Set([...p.friends, playdate.toPetId])] } : p);
+            toUser.pets = toUser.pets.map(p => p.id === playdate.toPetId ? {...p, friends: [...new Set([...p.friends, playdate.fromPetId])] } : p);
 
             newUsers[playdate.fromUserId] = fromUser;
             newUsers[playdate.toUserId] = toUser;
@@ -655,7 +571,6 @@ const App: React.FC = () => {
         let petIndexInOwner: number = -1;
         let friendIndexInOwner: number = -1;
 
-        // Find owners and pet indices
         for (const userId in newUsers) {
             const user = newUsers[userId];
             const pIndex = user.pets.findIndex((p: Pet) => p.id === petId);
@@ -671,15 +586,12 @@ const App: React.FC = () => {
         }
         
         if (petOwnerId && friendOwnerId && petIndexInOwner > -1 && friendIndexInOwner > -1) {
-            // Remove friend from pet
             const pet = newUsers[petOwnerId].pets[petIndexInOwner];
             pet.friends = pet.friends.filter((id: string) => id !== friendId);
             
-            // Remove pet from friend
             const friendPet = newUsers[friendOwnerId].pets[friendIndexInOwner];
             friendPet.friends = friendPet.friends.filter((id: string) => id !== petId);
 
-            // Update state
             if (currentUser?.id === petOwnerId) setCurrentUser(newUsers[petOwnerId]);
             if (currentUser?.id === friendOwnerId) setCurrentUser(newUsers[friendOwnerId]);
             if (viewingProfile?.id === petOwnerId) setViewingProfile(newUsers[petOwnerId]);
@@ -690,6 +602,32 @@ const App: React.FC = () => {
         return newUsers;
     });
   };
+
+  const handleOpenMessaging = (startWithUserId?: string) => {
+    setIsMessagingOpen(true);
+    if (startWithUserId) {
+      setActiveConversationUserId(startWithUserId);
+    }
+  };
+
+  const handleSendMessage = (toUserId: string, content: string) => {
+    if (!currentUser) return;
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      fromUserId: currentUser.id,
+      toUserId,
+      content,
+      timestamp: new Date().toISOString(),
+      read: true,
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
+  const handleStartConversation = (userId: string) => {
+    setActiveConversationUserId(userId);
+    setIsMessagingOpen(true);
+  };
+
 
   if (authState === 'loggedOut') {
     return <Login onLogin={handleLogin} />;
@@ -715,26 +653,42 @@ const App: React.FC = () => {
     );
   }
 
-  const visiblePosts = posts.filter(post => {
-    if (post.user.id === currentUser.id) return true; // Always see your own posts
-    
-    const postUser = users[post.user.id];
-    const visibility = postUser.privacySettings.activity;
+  const visibleFeedItems = feedItems
+    .filter(item => {
+        if (item.user.id === currentUser.id) return true;
+        
+        const itemOwner = users[item.user.id];
+        if (!itemOwner) return false;
+        const visibility = itemOwner.privacySettings.activity;
 
-    switch (visibility) {
-        case 'public':
-            return true;
-        case 'friends':
-            return postUser.friends.includes(currentUser.id);
-        case 'private':
-            return false;
-        default:
-            return true;
-    }
-  });
+        switch (visibility) {
+            case 'public':
+                return true;
+            case 'friends':
+                return itemOwner.friends.includes(currentUser.id);
+            case 'private':
+                return false;
+            default:
+                return true;
+        }
+    })
+    .filter(item => {
+        switch(activeFilter) {
+            case 'posts':
+                return item.type === 'post';
+            case 'activities':
+                return item.type === 'activity';
+            case 'friends':
+                return currentUser.friends.includes(item.user.id);
+            case 'all':
+            default:
+                return true;
+        }
+    });
 
   const MainContent: React.FC = () => {
     if (viewingPet) {
+      const owner = Object.values(users).find(u => u.pets.some(p => p.id === viewingPet.id));
       return (
         <PetProfile 
           pet={viewingPet} 
@@ -743,12 +697,12 @@ const App: React.FC = () => {
           allPlaydates={Object.values(playdates)}
           onReturn={() => setViewingPet(null)}
           onViewPet={handleViewPet}
+          onViewProfile={owner ? () => handleViewProfile(owner) : undefined}
           onUpdatePetPrivacySettings={handleUpdatePetPrivacySettings}
           onAddPetPhoto={handleAddPetPhoto}
           onAddHealthLogEntry={handleAddHealthLogEntry}
           onAddPetAchievement={handleAddPetAchievement}
           onAddFavoriteItem={handleAddFavoriteItem}
-          onAddPetActivity={handleAddPetActivity}
           onRemovePetFriend={handleRemovePetFriend}
         />
       );
@@ -766,16 +720,38 @@ const App: React.FC = () => {
           onSendFriendRequest={handleSendFriendRequest}
           onRespondToFriendRequest={handleRespondToFriendRequest}
           onOpenPlaydateModal={handleOpenPlaydateModal}
+          onStartConversation={handleStartConversation}
+          onViewProfile={handleViewProfile}
         />
       );
+    }
+
+    if (currentView === 'discover') {
+        return (
+            <DiscoverPage
+                currentUser={currentUser}
+                allUsers={Object.values(users)}
+                onViewProfile={handleViewProfile}
+                onViewPet={handleViewPet}
+            />
+        );
     }
       
     return (
       <main className="max-w-2xl mx-auto py-8 px-4">
-        <CreatePostForm onCreatePost={handleCreatePost} user={currentUser} />
+        <CreateFeedItemForm 
+            currentUser={currentUser} 
+            onCreatePost={handleCreatePost}
+            onCreateActivity={handleCreateActivity}
+        />
+        <FeedFilter activeFilter={activeFilter} onFilterChange={setActiveFilter} />
         <div className="mt-8 space-y-6">
-          {visiblePosts.map(post => (
-            <PostCard key={post.id} post={post} onLike={handleLikePost} onViewProfile={handleViewProfile} />
+          {visibleFeedItems.map(item => (
+            item.type === 'post' ? (
+                <PostCard key={item.id} post={item} onLike={handleLikeFeedItem} onViewProfile={handleViewProfile} onViewPet={handleViewPet} />
+            ) : (
+                <PetActivityCard key={item.id} activity={item} onLike={handleLikeFeedItem} onViewProfile={handleViewProfile} onViewPet={handleViewPet} />
+            )
           ))}
         </div>
       </main>
@@ -788,13 +764,17 @@ const App: React.FC = () => {
       <Header
         user={currentUser}
         allUsers={users}
+        messages={messages}
         allFriendRequests={Object.values(friendRequests).filter(req => req.toUserId === currentUser.id)}
         allPlaydates={Object.values(playdates).filter(pd => pd.toUserId === currentUser.id && pd.status === 'pending')}
         onLogout={handleLogout}
         onNavigateToDashboard={handleNavigateToDashboard}
         onViewProfile={() => handleViewProfile(currentUser)}
+        onReturnToFeed={handleReturnToFeed}
+        onNavigateToDiscover={handleNavigateToDiscover}
         onRespondToFriendRequest={handleRespondToFriendRequest}
         onRespondToPlaydateRequest={handleRespondToPlaydateRequest}
+        onOpenMessaging={handleOpenMessaging}
       />
       <MainContent />
        {isPlaydateModalOpen && playdateTarget && (
@@ -806,6 +786,17 @@ const App: React.FC = () => {
           onSendRequest={handleSendPlaydateRequest}
         />
       )}
+      {isMessagingOpen && (
+        <MessagingView
+          currentUser={currentUser}
+          allUsers={users}
+          messages={messages}
+          onClose={() => setIsMessagingOpen(false)}
+          onSendMessage={handleSendMessage}
+          activeConversationUserId={activeConversationUserId}
+          onNavigateToUser={handleViewProfile}
+        />
+       )}
     </div>
   );
 };

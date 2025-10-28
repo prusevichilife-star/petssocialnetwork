@@ -1,35 +1,47 @@
 import React from 'react';
-import { Post, User } from '../types';
+import { Post, User, Pet } from '../types';
 import HeartIcon from './icons/HeartIcon';
+import { timeAgo } from '../utils';
+
 
 interface PostCardProps {
   post: Post;
   onLike: (postId: string) => void;
   onViewProfile: (user: User) => void;
+  onViewPet: (pet: Pet) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onLike, onViewProfile }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onLike, onViewProfile, onViewPet }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
       <div className="p-4">
         <div
-          className="flex items-center mb-4 cursor-pointer"
-          onClick={() => onViewProfile(post.user)}
+          className="flex items-center mb-4"
         >
-          <img className="h-12 w-12 rounded-full" src={post.pet?.avatarUrl || post.user.avatarUrl} alt={post.pet?.name || post.user.name} />
+          <img 
+            className="h-12 w-12 rounded-full cursor-pointer" 
+            src={post.pet?.avatarUrl || post.user.avatarUrl} 
+            alt={post.pet?.name || post.user.name} 
+            onClick={() => post.pet ? onViewPet(post.pet) : onViewProfile(post.user)}
+            />
           <div className="ml-4">
             {post.pet ? (
               <>
-                <p className="font-bold text-gray-900 dark:text-white">{post.pet.name}</p>
+                <p 
+                    className="font-bold text-gray-900 dark:text-white cursor-pointer hover:underline"
+                    onClick={() => onViewPet(post.pet)}
+                >
+                    {post.pet.name}
+                </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {post.pet.breed} · with {post.user.name} · {post.timestamp}
+                  {post.pet.breed} · with <span className="cursor-pointer hover:underline" onClick={() => onViewProfile(post.user)}>{post.user.name}</span> · {timeAgo(post.date)}
                 </p>
               </>
             ) : (
-              <>
-                <p className="font-bold text-gray-900 dark:text-white">{post.user.name}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">@{post.user.username} · {post.timestamp}</p>
-              </>
+              <div onClick={() => onViewProfile(post.user)} className="cursor-pointer">
+                <p className="font-bold text-gray-900 dark:text-white hover:underline">{post.user.name}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">@{post.user.username} · {timeAgo(post.date)}</p>
+              </div>
             )}
           </div>
         </div>
