@@ -25,7 +25,7 @@ const initialPets: { [key: string]: Pet } = {
       'https://picsum.photos/seed/buddy-2/400/300',
       'https://picsum.photos/seed/buddy-3/400/300',
     ],
-    friends: [],
+    friends: ['pet-2'],
     privacySettings: { profile: 'public', playdates: 'friends' },
     healthLog: [
         { id: 'hl-1', type: 'Vaccination', date: '2022-06-01', notes: 'Annual booster shots.' },
@@ -57,7 +57,7 @@ const initialPets: { [key: string]: Pet } = {
         'https://picsum.photos/seed/lucy-1/400/300',
         'https://picsum.photos/seed/lucy-2/400/300',
     ],
-    friends: [],
+    friends: ['pet-1'],
     privacySettings: { profile: 'friends', playdates: 'friends' },
     healthLog: [],
     achievements: [
@@ -633,9 +633,62 @@ const App: React.FC = () => {
             if (viewingProfile?.id === fromUser.id) setViewingProfile(fromUser);
             if (viewingProfile?.id === toUser.id) setViewingProfile(toUser);
             
+            if (viewingPet?.id === playdate.fromPetId) {
+                const updatedViewingPet = fromUser.pets.find(p => p.id === playdate.fromPetId);
+                if (updatedViewingPet) setViewingPet(updatedViewingPet);
+            }
+            if (viewingPet?.id === playdate.toPetId) {
+                const updatedViewingPet = toUser.pets.find(p => p.id === playdate.toPetId);
+                if (updatedViewingPet) setViewingPet(updatedViewingPet);
+            }
+
             return newUsers;
         });
       }
+  };
+
+  const handleRemovePetFriend = (petId: string, friendId: string) => {
+    setUsers(prevUsers => {
+        const newUsers = JSON.parse(JSON.stringify(prevUsers));
+        let petOwnerId: string | null = null;
+        let friendOwnerId: string | null = null;
+        let petIndexInOwner: number = -1;
+        let friendIndexInOwner: number = -1;
+
+        // Find owners and pet indices
+        for (const userId in newUsers) {
+            const user = newUsers[userId];
+            const pIndex = user.pets.findIndex((p: Pet) => p.id === petId);
+            if (pIndex !== -1) {
+                petOwnerId = userId;
+                petIndexInOwner = pIndex;
+            }
+            const fIndex = user.pets.findIndex((p: Pet) => p.id === friendId);
+            if (fIndex !== -1) {
+                friendOwnerId = userId;
+                friendIndexInOwner = fIndex;
+            }
+        }
+        
+        if (petOwnerId && friendOwnerId && petIndexInOwner > -1 && friendIndexInOwner > -1) {
+            // Remove friend from pet
+            const pet = newUsers[petOwnerId].pets[petIndexInOwner];
+            pet.friends = pet.friends.filter((id: string) => id !== friendId);
+            
+            // Remove pet from friend
+            const friendPet = newUsers[friendOwnerId].pets[friendIndexInOwner];
+            friendPet.friends = friendPet.friends.filter((id: string) => id !== petId);
+
+            // Update state
+            if (currentUser?.id === petOwnerId) setCurrentUser(newUsers[petOwnerId]);
+            if (currentUser?.id === friendOwnerId) setCurrentUser(newUsers[friendOwnerId]);
+            if (viewingProfile?.id === petOwnerId) setViewingProfile(newUsers[petOwnerId]);
+            if (viewingProfile?.id === friendOwnerId) setViewingProfile(newUsers[friendOwnerId]);
+            if (viewingPet?.id === petId) setViewingPet(pet);
+        }
+
+        return newUsers;
+    });
   };
 
   if (authState === 'loggedOut') {
@@ -696,6 +749,7 @@ const App: React.FC = () => {
           onAddPetAchievement={handleAddPetAchievement}
           onAddFavoriteItem={handleAddFavoriteItem}
           onAddPetActivity={handleAddPetActivity}
+          onRemovePetFriend={handleRemovePetFriend}
         />
       );
     }

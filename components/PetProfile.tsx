@@ -23,6 +23,7 @@ import FlagIcon from './icons/FlagIcon';
 import PuzzlePieceIcon from './icons/PuzzlePieceIcon';
 import MapIcon from './icons/MapIcon';
 import ScissorsIcon from './icons/ScissorsIcon';
+import UserMinusIcon from './icons/UserMinusIcon';
 
 interface PetProfileProps {
   pet: Pet;
@@ -37,6 +38,7 @@ interface PetProfileProps {
   onAddPetAchievement: (petId: string, newAchievement: Omit<PetAchievement, 'id'>) => void;
   onAddFavoriteItem: (petId: string, newItem: Omit<FavoriteItem, 'id'>) => void;
   onAddPetActivity: (petId: string, newActivity: Omit<PetActivity, 'id'>) => void;
+  onRemovePetFriend: (petId: string, friendId: string) => void;
 }
 
 const calculateAge = (birthdate: string): string => {
@@ -58,7 +60,7 @@ const InfoPill: React.FC<{ icon: React.ReactNode; label: string; value: string }
     </div>
 );
 
-const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, allPlaydates, onReturn, onViewPet, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement, onAddFavoriteItem, onAddPetActivity }) => {
+const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, allPlaydates, onReturn, onViewPet, onUpdatePetPrivacySettings, onAddPetPhoto, onAddHealthLogEntry, onAddPetAchievement, onAddFavoriteItem, onAddPetActivity, onRemovePetFriend }) => {
   const age = calculateAge(pet.birthdate);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -449,12 +451,23 @@ const PetProfile: React.FC<PetProfileProps> = ({ pet, currentUser, allUsers, all
                  {playPals.length > 0 ? (
                     <div className="space-y-3">
                         {playPals.map(pal => (
-                            <div key={pal.id} onClick={() => onViewPet(pal)} className="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <img className="h-12 w-12 rounded-full" src={pal.avatarUrl} alt={pal.name} />
-                                <div>
-                                    <p className="font-semibold">{pal.name}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{pal.breed}</p>
+                            <div key={pal.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                                <div onClick={() => onViewPet(pal)} className="flex items-center space-x-3 cursor-pointer">
+                                    <img className="h-12 w-12 rounded-full" src={pal.avatarUrl} alt={pal.name} />
+                                    <div>
+                                        <p className="font-semibold group-hover:text-indigo-500">{pal.name}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{pal.breed}</p>
+                                    </div>
                                 </div>
+                                {isOwner && (
+                                    <button
+                                        onClick={() => onRemovePetFriend(pet.id, pal.id)}
+                                        className="p-2 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="Remove Friend"
+                                    >
+                                        <UserMinusIcon />
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>
