@@ -1,9 +1,12 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, FeedItem, Post, ActivityFeedItem, Message, UserDatabase } from './types';
-import { initDB, getAllUsersData, getUserData, setUserData } from './database';
+import { User, Pet, Role, UserStatus, Visibility, PrivacySettings, FriendRequest, Playdate, PetPrivacySettings, HealthLogEntry, PetAchievement, FavoriteItem, FeedItem, Post, ActivityFeedItem, Message, UserDatabase, Group, GroupVisibility } from './types';
+import { initDB, getAllUsersData, getUserData, setUserData, getAllGroups, setAllGroups } from './database';
 import Header from './components/Header';
 import CreateFeedItemForm from './components/CreateFeedItemForm';
+import CreateGroupForm from './components/CreateGroupForm';
+import GroupCard from './components/GroupCard';
+import GroupView from './components/GroupView';
 import PostCard from './components/PostCard';
 import PetActivityCard from './components/PetActivityCard';
 import Login from './components/Login';
@@ -19,10 +22,11 @@ import FeedFilter from './components/FeedFilter';
 // Initialize DB on script load
 initDB();
 const initialAllUserData = getAllUsersData();
+const initialAllGroups = getAllGroups();
 
 
 type AuthState = 'loggedOut' | 'needsMfa' | 'loggedIn' | 'adminDashboard';
-type CurrentView = 'feed' | 'discover';
+type CurrentView = 'feed' | 'discover' | 'groups';
 type LoginResult = 'success' | 'notFound' | 'suspended';
 export type FilterType = 'all' | 'posts' | 'activities' | 'friends';
 
@@ -49,6 +53,10 @@ const App: React.FC = () => {
 
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(null);
+
+  const [allGroups, setAllGroups] = useState<Record<string, Group>>(initialAllGroups);
+  const [viewingGroup, setViewingGroup] = useState<Group | null>(null);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
   const allUsersMap = useMemo(() => Object.fromEntries(Object.values(allUserData).map(ud => [(ud as UserDatabase).user.id, (ud as UserDatabase).user])), [allUserData]);
   const allUsersList = useMemo(() => Object.values(allUsersMap), [allUsersMap]);
@@ -392,6 +400,56 @@ const App: React.FC = () => {
     setIsMessagingOpen(true);
   };
 
+  const handleCreateGroup = (name: string, description: string, visibility: GroupVisibility) => {
+    if (!currentUser) return;
+    const newGroup: Group = {
+      id: `group-${Date.now()}`,
+      name,
+      description,
+      visibility,
+      avatarUrl: `https://picsum.photos/seed/group-${Date.now()}/200/200`,
+      members: { [currentUser.id]: { role: 'admin' } },
+    };
+    const updatedGroups = { ...allGroups, [newGroup.id]: newGroup };
+    setAllGroups(updatedGroups);
+    setIsCreatingGroup(false);
+  };
+
+  const handleJoinGroup = (groupId: string) => {
+    if (!currentUser) return;
+    const group = allGroups[groupId];
+    if (group && group.visibility !== 'secret') {
+      const updatedGroup = {
+        ...group,
+        members: { ...group.members, [currentUser.id]: { role: 'member' } },
+      };
+      const updatedGroups = { ...allGroups, [groupId]: updatedGroup };
+      setAllGroups(updatedGroups);
+      if (viewingGroup?.id === groupId) {
+        setViewingGroup(updatedGroup);
+      }
+    }
+  };
+
+  const handleLeaveGroup = (groupId: string) => {
+    if (!currentUser) return;
+    const group = allGroups[groupId];
+    if (group && group.members[currentUser.id]) {
+      const { [currentUser.id]: _, ...remainingMembers } = group.members;
+      const updatedGroup = { ...group, members: remainingMembers };
+      const updatedGroups = { ...allGroups, [groupId]: updatedGroup };
+      setAllGroups(updatedGroups);
+      if (viewingGroup?.id === groupId) {
+        setViewingGroup(updatedGroup);
+      }
+    }
+  };
+
+  const handleViewGroup = (group: Group) => {
+    setViewingGroup(group);
+    setCurrentView('groups');
+  };
+
 
   if (authState === 'loggedOut' || !currentUser) {
     return <Login onLogin={handleLogin} />;
@@ -442,7 +500,7 @@ const App: React.FC = () => {
     if (viewingPet) {
       const owner = allUsersList.find(u => u.pets.some(p => p.id === viewingPet.id));
       return (
-        <PetProfile 
+        <PetProfile
           pet={viewingPet} currentUser={currentUser} allUsers={allUsersMap}
           allPlaydates={Object.values(allUserData).flatMap(ud => (ud as UserDatabase).playdates)}
           onReturn={() => setViewingPet(null)} onViewPet={handleViewPet}
@@ -458,7 +516,7 @@ const App: React.FC = () => {
     }
     if (viewingProfile) {
       return (
-        <UserProfile 
+        <UserProfile
           user={viewingProfile} currentUser={currentUser} allUsers={allUsersList}
           onReturnToFeed={handleReturnToFeed} onUpdatePrivacySettings={handleUpdatePrivacySettings}
           onViewPet={handleViewPet} onSendFriendRequest={handleSendFriendRequest}

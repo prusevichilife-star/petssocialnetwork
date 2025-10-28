@@ -1,7 +1,34 @@
 
-import { User, Pet, Post, ActivityFeedItem, FriendRequest, Playdate, Message, UserDatabase } from './types';
+import { User, Pet, Post, ActivityFeedItem, FriendRequest, Playdate, Message, UserDatabase, Group } from './types';
 
 const DB_INITIALIZED_KEY = 'petsocial_db_initialized';
+
+const initialGroups: Record<string, Group> = {
+  'group-1': {
+    id: 'group-1',
+    name: 'Golden Retriever Lovers',
+    description: 'A group for owners and lovers of Golden Retrievers.',
+    avatarUrl: 'https://picsum.photos/seed/group-1/200/200',
+    visibility: 'public',
+    members: { 'user-1': { role: 'admin' }, 'user-2': { role: 'member' } },
+  },
+  'group-2': {
+    id: 'group-2',
+    name: 'Cat Fanatics',
+    description: 'For those who are crazy about cats.',
+    avatarUrl: 'https://picsum.photos/seed/group-2/200/200',
+    visibility: 'private',
+    members: { 'user-2': { role: 'admin' }, 'user-3': { role: 'member' } },
+  },
+  'group-3': {
+    id: 'group-3',
+    name: 'Secret Dog Society',
+    description: 'A secret group for dogs and their trusted companions.',
+    avatarUrl: 'https://picsum.photos/seed/group-3/200/200',
+    visibility: 'secret',
+    members: { 'user-4': { role: 'admin' }, 'user-1': { role: 'member' } },
+  },
+};
 
 const initialPets: { [key: string]: Pet } = {
   'pet-1': { id: 'pet-1', name: 'Buddy', type: 'Dog', breed: 'Golden Retriever', avatarUrl: 'https://picsum.photos/seed/buddy/200/200', birthdate: '2018-05-12', bio: 'Loves fetch and long walks.', photos: ['https://picsum.photos/seed/buddy-1/400/300'], friends: ['pet-2', 'pet-5'], privacySettings: { profile: 'public', playdates: 'friends' } },
@@ -115,10 +142,13 @@ export const initDB = () => {
             activities: userActivities,
             messages: initialMessages.filter(m => m.fromUserId === userId || m.toUserId === userId),
             playdates: Object.values(initialPlaydates).filter(p => p.fromUserId === userId || p.toUserId === userId),
+            groups: [],
         };
 
         localStorage.setItem(userId, JSON.stringify(userDb));
     });
+
+    localStorage.setItem('groups', JSON.stringify(initialGroups));
 
     localStorage.setItem(DB_INITIALIZED_KEY, 'true');
 };
@@ -145,3 +175,12 @@ export const getAllUsersData = (): Record<string, UserDatabase> => {
     }
     return allUserData;
 }
+
+export const getAllGroups = (): Record<string, Group> => {
+    const groups = localStorage.getItem('groups');
+    return groups ? JSON.parse(groups) : {};
+};
+
+export const setAllGroups = (groups: Record<string, Group>) => {
+    localStorage.setItem('groups', JSON.stringify(groups));
+};

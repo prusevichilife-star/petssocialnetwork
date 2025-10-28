@@ -136,4 +136,26 @@ export interface UserDatabase {
   activities: ActivityFeedItem[];
   messages: Message[];
   playdates: Playdate[];
+  groups: Group[];
+}
+
+export type GroupVisibility = 'public' | 'private' | 'secret';
+
+export interface Group {
+  id: string;
+  name: string;
+  description: string;
+  avatarUrl: string;
+  visibility: GroupVisibility;
+  members: Record<string, { role: 'admin' | 'member' }>; // Keyed by userId
+}
+
+export interface GroupMembership {
+  groupId: string;
+  userId: string;
+  role: 'admin' | 'member';
+}
+
+export interface GroupPost extends Post {
+  groupId: string;
 }
