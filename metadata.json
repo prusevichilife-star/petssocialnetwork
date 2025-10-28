@@ -1,0 +1,5 @@
+{
+  "name": "PetSocial",
+  "description": "A social network for pets and their owners, built with React and Tailwind CSS. Share updates about your furry friends!",
+  "requestFramePermissions": []
+}
